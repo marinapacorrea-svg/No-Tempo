@@ -13,6 +13,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="No Tempo: descubra que horas acordar e sair para chegar no horário. Protótipo com dados simulados.">
 <title>No Tempo</title>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(function(OneSignal){
+    OneSignal.init({ appId: "bc59f3db-2645-4520-8656-38e42f6af78c" });
+  });
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
@@ -602,6 +609,18 @@ function render(top){
 }
 function nav(cur){const items=[['today','alarm','Hoje'],['agenda','cal','Agenda'],['routes','route','Rotas'],['benefits','tag','Benefícios'],['profile','user','Perfil']];
   return `<nav class="nav" aria-label="Navegação principal">${items.map(([k,i,l])=>`<button class="navbtn ${cur===k?'on':''}" data-action="tab" data-v="${k}" ${cur===k?'aria-current="page"':''}>${icon(i,22)}<span>${l}</span></button>`).join('')}</nav>`}
+/* ---------- avisos push (OneSignal) ---------- */
+const isIOS=()=>/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+const pushSupported=()=>typeof Notification!=='undefined';
+const pushActive=()=>pushSupported()&&Notification.permission==='granted';
+function pushCard(){
+  if(isIOS()&&!isStandalone()) return `<div class="card flat"><div class="row top"><span class="ico-tile blue">${icon('bell')}</span><div class="grow"><h3>Avisos de saída</h3><p class="small muted">Para receber avisos, toque em Compartilhar &gt; Adicionar à Tela de Início e abra pelo ícone.</p></div></div></div>`;
+  if(!pushSupported()) return `<div class="card flat"><div class="row top"><span class="ico-tile blue">${icon('bell')}</span><div class="grow"><h3>Avisos de saída</h3><p class="small muted">Seu navegador não é compatível com avisos push.</p></div></div></div>`;
+  const active=pushActive();
+  return `<div class="card flat"><div class="row top"><span class="ico-tile blue">${icon('bell')}</span><div class="grow"><h3>Avisos de saída</h3><p class="small muted">Receba um aviso no celular na hora de sair de casa.</p>
+    <div style="margin-top:10px">${active?`<span class="pill green">${icon('check',14,2.4)}Avisos ativos</span>`:`<button class="btn btn-sm btn-primary" data-action="enable-push">Ativar avisos de saída</button>`}</div></div></div></div>`;
+}
 const unread=()=>st.notifs.filter(n=>!n.read).length;
 const bell=()=>`<button class="iconbtn" data-action="go" data-v="notifs" aria-label="Notificações${unread()?`, ${unread()} não lidas`:''}">${icon('bell')}${unread()?`<span class="badge">${unread()}</span>`:''}</button>`;
 const scenChip=()=>{const s=SCEN[st.scenario];return `<button class="scen" data-action="open-scen" aria-label="Trocar cenário de demonstração"><span class="dot ${s.tone}"></span>Cenário de demonstração: <b>${s.short}</b>${icon('down',14)}</button>`};
@@ -691,6 +710,7 @@ function vSetup(){
   if(n===5){const P=[['loc','location','Localização','Ajuda a sugerir a origem quando você não está em casa. Você pode usar endereços digitados.'],['notif','bell','Notificações','Avisos de alarme alterado, mudança no tempo do trajeto, hora de sair e problemas na linha.'],['cal','cal','Calendário','Importar compromissos do seu calendário. Integração prevista para uma versão futura.']];
     body=`${P.map(([k,i,t,d])=>`<div class="card flat"><div class="row top"><span class="ico-tile blue">${icon(i)}</span><div class="grow"><h3>${t}</h3><p class="small muted">${d}</p>
       <div class="btnrow" style="margin-top:10px"><button class="btn btn-sm ${D.perms[k]?'btn-primary':'btn-line'}" data-action="perm" data-k="${k}" data-v="1">${D.perms[k]?icon('check',16,2.4)+'Permitido (simulado)':'Permitir'}</button><button class="btn btn-sm ${!D.perms[k]?'btn-soft':'btn-line'}" data-action="perm" data-k="${k}" data-v="0">Agora não</button></div></div></div></div>`).join('')}
+    ${pushCard()}
     <p class="hint">Sem permissões, tudo continua funcionando com configuração manual.</p>
     <label class="check"><input type="checkbox" id="s-terms" ${D.terms?'checked':''} data-bind="setup.data.terms"><span class="small">Li e aceito os <a href="#" data-action="info" data-k="terms">termos de uso</a> e a <a href="#" data-action="info" data-k="privacy">política de privacidade</a>.</span></label>${E['setup.data.terms']?`<span class="err">${E['setup.data.terms']}</span>`:''}`;
   }
@@ -1251,6 +1271,19 @@ const A={
   set:d=>{setPath(ui,d.p,d.val);render()},
   'set-bool':d=>{setPath(ui,d.p,!getPath(ui,d.p));render()},
   perm:d=>{ui.setup.data.perms[d.k]=d.v==='1';render()},
+  'enable-push':()=>{
+    if(!window.OneSignalDeferred){toast('Serviço de avisos indisponível.');return}
+    window.OneSignalDeferred.push(async function(OneSignal){
+      try{
+        await OneSignal.Notifications.requestPermission();
+        if(OneSignal.Notifications.permission){
+          const name=(ui.setup?.data?.name||st.user.name||'').trim();
+          if(name) await OneSignal.User.addTag('nome',name);
+          toast('Avisos de saída ativados.');
+        }else toast('Permissão de avisos não concedida.');
+      }catch(e){toast('Não foi possível ativar os avisos.')}
+    });
+  },
   info:(d,el,e)=>{e.preventDefault();if(d.k==='terms'||d.k==='privacy'){go('legal',{k:d.k});return}ui.modal={type:'info',k:d.k};render()},
   'legal-tab':d=>{ui.params={k:d.k};render(true)},
   'legal-accept':()=>{if(ui.setup)ui.setup.data.terms=true;ui.errors={};back()},
