@@ -1,0 +1,1336 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1F5AD6">
+<meta name="description" content="No Tempo: descubra que horas acordar e sair para chegar no horário. Protótipo com dados simulados.">
+<title>No Tempo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: coluna única de celular (máx. 480px) centralizada; barra inferior fixa; horários em fonte display com números tabulares. */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#F7F9FC; --ink:#0F1B2D; --muted:#566275; --faint:#8792A3; --line:#E1E6EE;
+  --blue:#1F5AD6; --blue-ink:#1646A8; --blue-soft:#E7EEFC; --on-blue:#FFFFFF; --hero:#1F5AD6; --hero-line:rgba(255,255,255,.22); --hero-soft:rgba(255,255,255,.14);
+  --green:#127A4A; --green-dot:#1FA866; --green-soft:#E2F3E9;
+  --yellow:#7E5300; --yellow-dot:#E3A600; --yellow-soft:#FFF2CC;
+  --red:#B92D1C; --red-dot:#E0442F; --red-soft:#FCE7E3;
+  --scrim:rgba(9,16,28,.48);
+  --shadow:0 1px 2px rgba(15,27,45,.05),0 6px 18px rgba(15,27,45,.05);
+  --f-display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:20px; --r-sm:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0C121B; --surface:#141C28; --surface-2:#18212F; --ink:#E9EEF6; --muted:#A1ACBD; --faint:#768295; --line:#253144;
+  --blue:#6C9BFF; --blue-ink:#9DBDFF; --blue-soft:#1A2948; --on-blue:#0B1220; --hero:#2556C4; --hero-line:rgba(255,255,255,.2); --hero-soft:rgba(255,255,255,.12);
+  --green:#5BD196; --green-dot:#3EC27F; --green-soft:#11301F;
+  --yellow:#F2C75A; --yellow-dot:#E8B02A; --yellow-soft:#33290E;
+  --red:#FF8A7A; --red-dot:#F0604C; --red-soft:#3A1713;
+  --scrim:rgba(0,0,0,.6); --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark; }}
+:root[data-theme="dark"]{
+  --bg:#0C121B; --surface:#141C28; --surface-2:#18212F; --ink:#E9EEF6; --muted:#A1ACBD; --faint:#768295; --line:#253144;
+  --blue:#6C9BFF; --blue-ink:#9DBDFF; --blue-soft:#1A2948; --on-blue:#0B1220; --hero:#2556C4; --hero-line:rgba(255,255,255,.2); --hero-soft:rgba(255,255,255,.12);
+  --green:#5BD196; --green-dot:#3EC27F; --green-soft:#11301F;
+  --yellow:#F2C75A; --yellow-dot:#E8B02A; --yellow-soft:#33290E;
+  --red:#FF8A7A; --red-dot:#F0604C; --red-soft:#3A1713;
+  --scrim:rgba(0,0,0,.6); --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark; }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+input,select,textarea{font:inherit;color:inherit}
+a{color:var(--blue-ink)}
+.ic{flex:none;display:block}
+.app{max-width:480px;margin:0 auto;padding:14px 16px 128px;min-height:100%}
+.app.nonav{padding-bottom:40px}
+@media (min-width:760px){ body{background:var(--surface-2)} .app{background:var(--bg);border-left:1px solid var(--line);border-right:1px solid var(--line)} }
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-family:var(--f-display);font-size:26px;font-weight:650;letter-spacing:-.015em;line-height:1.15}
+h2{font-family:var(--f-display);font-size:18px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:15px;font-weight:650}
+p{margin:0}
+.eyebrow{font-size:12px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:13px} .xs{font-size:12px}
+.tnum{font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:12px}
+.stack-sm{display:flex;flex-direction:column;gap:6px}
+.stack-lg{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.row.top{align-items:flex-start}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.wrap{flex-wrap:wrap}
+.center{text-align:center}
+
+/* Cabeçalho */
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-block:6px 4px}
+.hd-actions{display:flex;gap:8px;align-items:center}
+.iconbtn{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;flex:none}
+.iconbtn .badge{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--red-dot);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg)}
+.subhd{display:flex;align-items:center;gap:10px;padding-block:4px 8px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5}
+.subhd h1{font-size:20px}
+.scen{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px dashed var(--line);background:transparent;cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:600}
+.scen b{color:var(--ink);font-weight:650}
+
+/* Cards */
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.card.flat{box-shadow:none}
+.card-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.card.tone-red{background:var(--red-soft);border-color:transparent;box-shadow:none}
+.card.tone-yellow{background:var(--yellow-soft);border-color:transparent;box-shadow:none}
+.card.tone-green{background:var(--green-soft);border-color:transparent;box-shadow:none}
+.card.tone-blue{background:var(--blue-soft);border-color:transparent;box-shadow:none}
+.tone-red .ttl{color:var(--red)} .tone-yellow .ttl{color:var(--yellow)} .tone-green .ttl{color:var(--green)}
+
+.hero{background:var(--hero);color:#fff;border-radius:24px;padding:20px 18px 16px;position:relative;overflow:hidden}
+.hero .eyebrow{color:rgba(255,255,255,.78)}
+.hero .big{font-family:var(--f-display);font-size:76px;font-weight:700;letter-spacing:-.035em;line-height:.95;font-variant-numeric:tabular-nums;margin-top:6px}
+.hero .big.off{font-size:40px;opacity:.85;letter-spacing:-.01em}
+.hero .seal{display:inline-flex;align-items:center;gap:6px;background:var(--hero-soft);border:1px solid var(--hero-line);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600}
+.hero .seal.warn{background:#FFE7A3;color:#5C3D00;border-color:transparent}
+.hero .cmp{font-size:16px;font-weight:650;margin-top:10px}
+.hero .why{color:rgba(255,255,255,.88);margin-top:2px}
+.hero .chg{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--hero-line);font-size:13px;color:rgba(255,255,255,.88)}
+.hero .chg s{opacity:.7}
+.hero .acts{display:flex;gap:8px;margin-top:14px}
+.hero .acts .btn{flex:1}
+.btn-hero{background:#fff;color:#123E9C}
+.btn-hero2{background:var(--hero-soft);color:#fff;border:1px solid var(--hero-line)}
+.hero-arc{position:absolute;right:-50px;top:-50px;width:190px;height:190px;border-radius:50%;border:26px solid rgba(255,255,255,.07);pointer-events:none}
+
+/* Botões */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:14px;border:0;font-weight:650;cursor:pointer;text-decoration:none;text-align:center;line-height:1.2}
+.btn:focus-visible,.chip:focus-visible,.iconbtn:focus-visible,.navbtn:focus-visible,.tap:focus-visible,.sw:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.btn-primary{background:var(--blue);color:var(--on-blue)}
+.btn-soft{background:var(--blue-soft);color:var(--blue-ink)}
+.btn-line{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.btn-danger{background:var(--red-soft);color:var(--red)}
+.btn-text{background:none;color:var(--blue-ink);min-height:40px;padding:0 6px}
+.btn-block{width:100%}
+.btn-sm{min-height:36px;padding:0 12px;font-size:13.5px;border-radius:11px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow .btn{flex:1 1 140px}
+
+/* Pílulas e pontos */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:650;white-space:nowrap}
+.pill.green{background:var(--green-soft);color:var(--green)}
+.pill.yellow{background:var(--yellow-soft);color:var(--yellow)}
+.pill.red{background:var(--red-soft);color:var(--red)}
+.pill.blue{background:var(--blue-soft);color:var(--blue-ink)}
+.pill.gray{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.dot.green{background:var(--green-dot)} .dot.yellow{background:var(--yellow-dot)} .dot.red{background:var(--red-dot)} .dot.gray{background:var(--faint)}
+
+/* Linhas de lista */
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);min-width:0}
+.lrow:first-child{border-top:0;padding-top:2px}
+.lrow:last-child{padding-bottom:2px}
+.lrow .lbl{color:var(--muted);flex:1;min-width:0}
+.lrow .val{font-weight:650;text-align:right}
+.tap{cursor:pointer;background:none;border:0;width:100%;text-align:left;padding:0}
+.ico-tile{width:38px;height:38px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex:none;color:var(--muted)}
+.ico-tile.blue{background:var(--blue-soft);color:var(--blue-ink);border-color:transparent}
+
+/* Manhã */
+.morning{display:grid;grid-template-columns:auto 1fr auto;column-gap:12px;row-gap:0}
+.mrow{display:contents}
+.mrow > *{padding:10px 0;border-top:1px solid var(--line)}
+.mrow:first-child > *{border-top:0}
+.mt{font-family:var(--f-display);font-weight:650;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt.sm{font-size:14px;color:var(--muted);align-self:center}
+.mt.key{font-size:24px;color:var(--blue-ink)}
+.ml{color:var(--muted);align-self:center}
+.mr{text-align:right;align-self:center}
+
+/* Formulário */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field > label,.flabel{font-size:13.5px;font-weight:650;color:var(--ink)}
+.hint{font-size:12.5px;color:var(--muted)}
+.inp{width:100%;min-height:48px;border:1px solid var(--line);border-radius:13px;padding:0 13px;background:var(--surface);font-size:16px}
+select.inp{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+.inp:focus{outline:2px solid var(--blue);outline-offset:0;border-color:transparent}
+.inp.bad{border-color:var(--red-dot)}
+.err{color:var(--red);font-size:13px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:7px}
+.chip.on{background:var(--blue);border-color:var(--blue);color:var(--on-blue)}
+.chip.day{width:44px;padding:0;justify-content:center}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:3px;gap:3px}
+.seg button{flex:1;min-height:36px;border:0;border-radius:10px;background:none;cursor:pointer;font-weight:650;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.sw{width:50px;height:30px;border-radius:999px;border:0;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.sw.on{background:var(--green-dot)}
+.sw.on::after{transform:translateX(20px)}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.check input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--blue);flex:none}
+.sugg-wrap{position:relative}
+.sugg{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:13px;background:var(--surface);overflow:hidden;margin-top:6px}
+.sugg:empty{display:none}
+.sugg button{border:0;background:none;text-align:left;padding:11px 13px;cursor:pointer;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.sugg button:first-child{border-top:0}
+.sugg button:hover{background:var(--surface-2)}
+.sugg .tag{margin-left:auto;font-size:11px;color:var(--faint)}
+
+/* Progresso */
+.progress{display:flex;gap:6px}
+.progress span{flex:1;height:5px;border-radius:99px;background:var(--line)}
+.progress span.on{background:var(--blue)}
+
+/* Navegação */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,480px);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:20}
+.navbtn{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;color:var(--faint);font-size:11.5px;font-weight:650;border-radius:12px}
+.navbtn.on{color:var(--blue-ink)}
+.navbtn.on .ic{stroke-width:2.2}
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 32px),448px);z-index:19;box-shadow:0 8px 22px rgba(31,90,214,.28)}
+
+/* Agenda */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal .dh{font-size:11.5px;color:var(--faint);font-weight:650;padding:4px 0;text-transform:uppercase}
+.cal button{border:0;background:none;height:38px;border-radius:11px;cursor:pointer;font-weight:600;position:relative;font-variant-numeric:tabular-nums}
+.cal button.out{color:var(--faint);opacity:.5}
+.cal button.today{box-shadow:inset 0 0 0 1.5px var(--blue)}
+.cal button.sel{background:var(--blue);color:var(--on-blue)}
+.cal button i{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--blue)}
+.cal button.sel i{background:var(--on-blue)}
+.ev{display:flex;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;cursor:pointer;text-align:left;width:100%}
+.ev .when{font-family:var(--f-display);font-weight:650;font-variant-numeric:tabular-nums;min-width:52px}
+.ev .when small{display:block;font-family:var(--f-body);font-weight:500;color:var(--faint);font-size:12px}
+.ev.routine{border-left:4px solid var(--blue)}
+.conn{display:flex;gap:10px;align-items:center;padding:8px 0 8px 22px;margin-left:16px;border-left:2px dashed var(--line);cursor:pointer;background:none;border-top:0;border-right:0;border-bottom:0;text-align:left;width:calc(100% - 16px)}
+.conn.static{cursor:default}
+.conn .box{flex:1;min-width:0;font-size:13.5px;color:var(--muted)}
+.conn .box b{color:var(--ink);font-weight:650}
+.conn.red .box{color:var(--red)} .conn.yellow .box{color:var(--yellow)}
+.conn .warnbox{margin-top:4px;padding:8px 10px;border-radius:11px;font-weight:600;font-size:13px}
+.conn.red .warnbox{background:var(--red-soft)} .conn.yellow .warnbox{background:var(--yellow-soft)}
+
+/* Rotas */
+.map{border-radius:18px;overflow:hidden;border:1px solid var(--line);position:relative;background:var(--surface-2)}
+.map svg{display:block;width:100%;height:auto}
+.map .mtag{position:absolute;left:10px;top:10px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:650;color:var(--muted)}
+.route{border-radius:18px}
+.route.sel{outline:2px solid var(--blue);outline-offset:-1px}
+.rtitle{font-family:var(--f-display);font-size:19px;font-weight:650;letter-spacing:-.01em}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.kv div{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+.kv small{display:block;color:var(--muted);font-size:11.5px;font-weight:600}
+.kv b{font-family:var(--f-display);font-size:17px;font-variant-numeric:tabular-nums}
+.steps{display:flex;flex-direction:column;margin-top:10px}
+.step{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.step:first-child{border-top:0}
+.step .m{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.step.done{color:var(--faint);text-decoration:line-through}
+.alert{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:8px 10px;border-radius:11px;margin-top:8px}
+.alert.red{background:var(--red-soft);color:var(--red)} .alert.yellow{background:var(--yellow-soft);color:var(--yellow)} .alert.green{background:var(--green-soft);color:var(--green)} .alert.gray{background:var(--surface-2);color:var(--muted)}
+
+/* Benefícios */
+.partner .logo{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--blue-soft);color:var(--blue-ink);flex:none}
+.code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:20px;font-weight:700;letter-spacing:.08em;padding:14px;border:2px dashed var(--line);border-radius:14px;text-align:center;user-select:all;background:var(--surface-2)}
+
+/* Modal */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:min(100%,480px);border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.sheet .grab{width:40px;height:5px;border-radius:9px;background:var(--line);margin:-6px auto 0}
+.cmp2{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;text-align:center;background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:12px}
+.cmp2 small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.cmp2 b{font-family:var(--f-display);font-size:28px;font-variant-numeric:tabular-nums}
+.cmp2 .old b{color:var(--faint);text-decoration:line-through;text-decoration-thickness:2px}
+.ring{position:fixed;inset:0;z-index:60;background:var(--hero);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center}
+.ring .big{font-family:var(--f-display);font-size:96px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.pulse{width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}*{transition:none!important}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:14px;font-weight:600;font-size:14px;z-index:70;width:max-content;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+/* Boas-vindas */
+.welcome{min-height:calc(100vh - 40px);display:flex;flex-direction:column;justify-content:space-between;gap:24px;padding-block:16px 8px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:-.02em}
+.logo .mark{width:38px;height:38px;border-radius:12px;background:var(--blue);display:flex;align-items:center;justify-content:center;color:var(--on-blue)}
+.welcome h1{font-size:34px;line-height:1.08;letter-spacing:-.025em}
+.illus{border-radius:24px;background:var(--surface);border:1px solid var(--line);padding:6px}
+.illus svg{width:100%;height:auto;display:block}
+.empty{text-align:center;padding:26px 16px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty .ico-tile{width:52px;height:52px;border-radius:16px}
+details.faq{border-top:1px solid var(--line);padding:12px 0}
+details.faq:first-of-type{border-top:0}
+details.faq summary{cursor:pointer;font-weight:650;list-style:none;display:flex;justify-content:space-between;gap:10px}
+details.faq summary::after{content:"+";color:var(--muted);font-weight:700}
+details.faq[open] summary::after{content:"–"}
+details.faq p{margin-top:8px;color:var(--muted);font-size:14px}
+.legal p{max-width:65ch}
+.calc{font-variant-numeric:tabular-nums}
+.calc .cl{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.calc .cl:first-child{border-top:0}
+.calc .cl.res{font-weight:700}
+.calc .cl.res span:last-child{font-family:var(--f-display);font-size:18px;color:var(--blue-ink)}
+.calc .op{color:var(--muted)}
+.section-title{display:flex;align-items:center;justify-content:space-between;margin:10px 2px 0}
+.demo-note{font-size:12px;color:var(--faint);display:flex;gap:6px;align-items:center}
+</style>
+
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* =========================================================
+   No Tempo — protótipo navegável (dados simulados)
+   Integrações futuras ficam marcadas com TODO.
+   ========================================================= */
+
+/* ---------- utilitários de tempo ---------- */
+const DOW=['dom','seg','ter','qua','qui','sex','sáb'];
+const DOW_LONG=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+const DOW_INI=['D','S','T','Q','Q','S','S'];
+const MONTHS=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const pad=n=>String(n).padStart(2,'0');
+const toMin=s=>{if(!s)return 0;const[h,m]=String(s).split(':').map(Number);return h*60+m};
+const fmt=m=>{if(m==null)return '--:--';m=((Math.round(m)%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(m%60)};
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseISO=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()};
+const nowHM=()=>fmt(nowMin());
+const todayISO=()=>iso(new Date());
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function dayLabel(isoStr,short){const d=parseISO(isoStr);const base=short?`${DOW[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}`:`${DOW_LONG[d.getDay()]}, ${d.getDate()} de ${MONTHS[d.getMonth()]}`;
+  if(isoStr===todayISO())return 'Hoje, '+base; if(isoStr===iso(addDays(new Date(),1)))return 'Amanhã, '+base; return cap(base)}
+const minTxt=n=>n===1?'1 minuto':`${n} minutos`;
+
+/* ---------- regra central de cálculo ----------
+   saída = compromisso − margem − trajeto
+   acordar = saída − tempo para se arrumar */
+function calculateRoutine({eventTime,margin,travel,prep}){
+  const departure=eventTime-margin-travel;
+  return {departure, wake:departure-prep, arrival:departure+travel};
+}
+
+/* ---------- dados simulados ---------- */
+// TODO: substituir SUGGEST por API de geocodificação/autocomplete.
+const SUGGEST=[
+  {a:'Rua Cubatão, 900 — Vila Mariana',x:0,y:0},
+  {a:'Rua Itapeva, 300 — Bela Vista',x:-2.6,y:-4.2},
+  {a:'Rua dos Pinheiros, 870 — Pinheiros',x:-5.3,y:-3.0},
+  {a:'Av. Brigadeiro Faria Lima, 2000 — Jardim Paulistano',x:-6.3,y:-1.6},
+  {a:'Av. Paulista, 1578 — Bela Vista',x:-2.3,y:-3.6},
+  {a:'Rua Augusta, 1500 — Consolação',x:-2.2,y:-4.6},
+  {a:'Av. da Liberdade, 532 — Liberdade',x:1.0,y:-3.2},
+  {a:'Rua Vergueiro, 2000 — Paraíso',x:0.3,y:-1.8},
+  {a:'Av. Rebouças, 3000 — Pinheiros',x:-5.0,y:-2.2},
+  {a:'Rua Teodoro Sampaio, 1020 — Pinheiros',x:-5.2,y:-3.6},
+  {a:'Av. Prof. Luciano Gualberto, 315 — Butantã',x:-9.5,y:-1.0},
+  {a:'Rua Maria Antônia, 294 — Vila Buarque',x:-1.8,y:-5.6},
+  {a:'Av. Ibirapuera, 3103 — Moema',x:-1.0,y:2.5},
+  {a:'Rua Domingos de Morais, 2564 — Vila Mariana',x:0.6,y:0.8},
+  {a:'Av. Santo Amaro, 1100 — Vila Nova Conceição',x:-3.0,y:0.5},
+  {a:'Rua Vergueiro, 7500 — Ipiranga',x:2.6,y:3.0},
+];
+function geocode(address){
+  const f=SUGGEST.find(s=>norm(s.a)===norm(address)); if(f) return {x:f.x,y:f.y};
+  let h=0; for(const c of norm(address)) h=(h*31+c.charCodeAt(0))>>>0;
+  const ang=(h%360)*Math.PI/180, r=2+((h>>8)%70)/10; return {x:+(Math.cos(ang)*r).toFixed(2),y:+(Math.sin(ang)*r).toFixed(2)};
+}
+
+const MODES={
+  bm:{label:'Ônibus + metrô',icons:['bus','train'],overhead:10,walk:16,transfers:2,gmaps:'transit',needs:['metro']},
+  bus:{label:'Ônibus',icons:['bus'],overhead:8,walk:11,transfers:0,gmaps:'transit',needs:['bus']},
+  car:{label:'Carro',icons:['car'],overhead:5,walk:3,transfers:0,gmaps:'driving',needs:['car']},
+  app:{label:'Transporte por app',icons:['phone'],overhead:7,walk:1,transfers:0,gmaps:'driving',needs:['app']},
+  walk:{label:'Caminhada',icons:['walk'],overhead:0,walk:null,transfers:0,gmaps:'walking',needs:['walk']},
+};
+const MODE_ORDER=['bm','bus','car','app','walk'];
+// Duração (min) do trajeto habitual Casa → destino da rotina, por cenário.
+// TODO: Google Maps/Directions (trânsito e rota), SPTrans Olho Vivo (ônibus), Metrô/CPTM (linhas).
+const BASE={
+  normal:{bm:35,bus:45,car:30,app:35,walk:75},
+  rain:{bm:50,bus:65,car:40,app:45,walk:85},
+  disruption:{bm:80,bus:50,car:35,app:40,walk:75},
+};
+// TODO: API de clima e de status de linhas.
+const SCEN={
+  normal:{label:'Dia normal',short:'Normal',tone:'green',traffic:['Normal','green'],weather:['Nublado · 21 °C','green','cloud'],bus:['Próximo ônibus em 4 min','green'],
+    lines:[['Linha 1-Azul','Operação normal','green'],['Linha 2-Verde','Operação normal','green']],desc:'Trânsito e transporte dentro do esperado.'},
+  rain:{label:'Trânsito intenso e chuva',short:'Chuva',tone:'yellow',traffic:['Intenso','red'],weather:['Chuva moderada · 17 °C','yellow','rain'],bus:['Próximo ônibus em 9 min · 5 min de atraso','yellow'],
+    lines:[['Linha 1-Azul','Operação normal','green'],['Linha 2-Verde','Operação normal','green']],desc:'Chuva deixa o trajeto 15 min mais longo.'},
+  disruption:{label:'Interrupção no transporte',short:'Interrupção',tone:'red',traffic:['Moderado','yellow'],weather:['Nublado · 20 °C','green','cloud'],bus:['Próximo ônibus em 6 min · mais cheio','yellow'],
+    lines:[['Linha 1-Azul','Paralisação parcial entre Ana Rosa e Paraíso','red'],['Linha 2-Verde','Operação normal','green']],desc:'Linha do metrô do seu trajeto com paralisação.'},
+  unavailable:{label:'Dados indisponíveis',short:'Sem dados',tone:'gray',desc:'Não foi possível atualizar a previsão.'},
+};
+const ALERTS={
+  normal:{},
+  rain:{bm:[['yellow','Chuva deixa o trecho de ônibus mais lento.']],bus:[['red','Corredor de ônibus com lentidão por causa da chuva.']],car:[['yellow','Trânsito intenso nas principais avenidas.']],app:[['yellow','Preço dinâmico provável por causa da chuva.']],walk:[['yellow','Chuva no caminho. Leve guarda-chuva.']]},
+  disruption:{bm:[['red','Linha 1-Azul com paralisação parcial entre Ana Rosa e Paraíso.']],bus:[['yellow','Ônibus mais cheios por causa da interrupção no metrô.']],app:[['yellow','Alta demanda: espera maior pelo motorista.']]},
+};
+const STEPS={
+  bm:[['walk','Caminhe até o ponto de ônibus',4],['clock','Aguarde o ônibus (linha simulada 5100-10)',3],['bus','Ônibus até a estação Ana Rosa',7],['train','Linha 1-Azul: Ana Rosa → Paraíso',4],['walk','Baldeação para a Linha 2-Verde',4],['train','Linha 2-Verde: Paraíso → Trianon-Masp',5],['walk','Caminhe até o destino',8]],
+  bus:[['walk','Caminhe até o ponto de ônibus',3],['clock','Aguarde o ônibus (linha simulada 5100-10)',4],['bus','Ônibus até a região do destino',30],['walk','Caminhe até o destino',8]],
+  car:[['car','Dirija até o destino',25],['pin','Estacione e caminhe',5]],
+  app:[['clock','Aguarde o motorista',5],['car','Corrida até o destino',30]],
+  walk:[['walk','Caminhe até o destino',75]],
+};
+const PARTNERS=[
+  {id:'p1',name:'Café Ponto Azul',cat:'cafe',catLabel:'Café',dist:120,extra:6,offer:'Café coado + pão de queijo por R$ 12',address:'Rua Itapeva, 150 — Bela Vista',terms:'Válido de segunda a sexta, até as 10:00. Um uso por dia.',valid:'Válido até 31/10/2026',code:'PONTOAZUL12',leg:'commute'},
+  {id:'p2',name:'Padaria Estação Paraíso',cat:'cafe',catLabel:'Café',dist:350,extra:12,offer:'10% de desconto no café da manhã',address:'Rua Vergueiro, 2000 — Paraíso',terms:'Válido para pedidos acima de R$ 15.',valid:'Válido até 15/11/2026',code:'ESTACAO10',leg:'commute'},
+  {id:'p3',name:'Marmita da Vila',cat:'almoco',catLabel:'Almoço',dist:450,extra:25,offer:'Prato do dia por R$ 24',address:'Rua dos Pinheiros, 700 — Pinheiros',terms:'De segunda a sexta, das 11:30 às 14:30.',valid:'Válido até 30/11/2026',code:'VILA24',leg:'lunch'},
+  {id:'p4',name:'Cozinha Bem Ali',cat:'almoco',catLabel:'Almoço',dist:800,extra:35,offer:'15% de desconto no almoço executivo',address:'Av. Rebouças, 2900 — Pinheiros',terms:'Não cumulativo com outras promoções.',valid:'Válido até 31/10/2026',code:'BEMALI15',leg:'lunch'},
+  {id:'p5',name:'Copiadora Expressa',cat:'outros',catLabel:'Serviços',dist:200,extra:8,offer:'20 impressões em preto e branco grátis',address:'Rua Augusta, 1480 — Consolação',terms:'Apresentando carteirinha de estudante.',valid:'Válido até 20/12/2026',code:'IMPRIME20',leg:'commute'},
+  {id:'p6',name:'Bicicletaria Pedal Livre',cat:'outros',catLabel:'Serviços',dist:1200,extra:18,offer:'Revisão básica com 20% de desconto',address:'Rua Domingos de Morais, 2564 — Vila Mariana',terms:'Agendamento direto com o parceiro.',valid:'Válido até 31/12/2026',code:'PEDAL20',leg:'commute'},
+];
+
+/* ---------- ícones ---------- */
+const IC={
+  alarm:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 2M5 3.5 2.5 6M19 3.5 21.5 6"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  route:'<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>',
+  tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  bell:'<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>', chev:'<path d="M9 5l7 7-7 7"/>', down:'<path d="M6 9l6 6 6-6"/>',
+  bus:'<rect x="5" y="3" width="14" height="15" rx="3"/><path d="M5 11h14M8 21v-3M16 21v-3"/><circle cx="8.5" cy="14.5" r=".8"/><circle cx="15.5" cy="14.5" r=".8"/>',
+  train:'<rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 10h12M9 21l1.5-4M15 21l-1.5-4"/><circle cx="9.5" cy="13.5" r=".8"/><circle cx="14.5" cy="13.5" r=".8"/>',
+  car:'<path d="M4 16v-4l2-5h12l2 5v4z"/><path d="M4 12h16"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/>',
+  walk:'<circle cx="13" cy="4.5" r="2"/><path d="M10 21l2-6 3 3v4M9 12l2-4 4 2 2 3M11 8 8 9l-1 3"/>',
+  phone:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>',
+  rain:'<path d="M7 15a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 7.5 3.75 3.75 0 0 1 17 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+  cloud:'<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/>',
+  alert:'<path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  pin:'<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>', trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  traffic:'<rect x="8" y="2.5" width="8" height="19" rx="3"/><circle cx="12" cy="7" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="17" r="1.3"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.2-1.5 2.5M12 17v.4"/>',
+  coffee:'<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3M12 3v3"/>',
+  food:'<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 1-3 4-3 7h3v11"/>',
+  box:'<path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+  history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
+  offline:'<path d="M2 8.5a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0M12 19h.01M3 3l18 18"/>',
+  play:'<path d="M7 4l13 8-13 8z"/>', flag:'<path d="M5 21V4h11l-2 4 2 4H5"/>',
+  ext:'<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>', home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>', sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  school:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5"/>', work:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2"/>',
+  online:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>', location:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/>',
+  sound:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/>',
+};
+const icon=(n,s=20,w=1.8)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`;
+const modeIcons=(m,s=18)=>MODES[m].icons.map(i=>icon(i,s)).join('');
+
+/* ---------- estado e persistência ---------- */
+const KEY='notempo:v1';
+let mem=null;
+function save(){const d=JSON.stringify(st);mem=d;try{localStorage.setItem(KEY,d)}catch(e){}}
+function load(){try{const d=localStorage.getItem(KEY);if(d)return JSON.parse(d)}catch(e){} return mem?JSON.parse(mem):null}
+function blankState(){return{v:1,onboarded:false,demo:false,user:{name:''},places:[],routine:null,selectedMode:'bm',scenario:'normal',updatedAt:nowHM(),lastGoodScenario:'normal',lastGoodAt:nowHM(),
+  events:[],notifs:[],changes:[],lastAlarm:null,history:[],trip:null,stop:null,
+  prefs:{partners:true,locSuggest:true,travelMin:5,notif:{alarm:true,travel:true,leave:true,disruption:true,event:true}},perms:{loc:false,notif:false,cal:false},terms:false,seq:100}}
+const uid=p=>`${p}-${(st.seq=(st.seq||100)+1)}`;
+const defaultRoutine=()=>({originId:'casa',destId:'facul',arrive:'08:00',end:'10:00',days:[1,2,3,4,5],prep:45,margin:10,modes:['bus','metro'],pref:'walk',auto:true,alarmOn:true,earliest:'06:00',allowEarlier:true,allowLater:true,sound:'Amanhecer',manual:null});
+
+function pickMode(modes){if(modes.includes('metro'))return 'bm';if(modes.includes('bus'))return 'bus';if(modes.includes('car'))return 'car';if(modes.includes('app'))return 'app';if(modes.includes('walk'))return 'walk';return 'bm'}
+function mondayOf(d){const x=new Date(d);const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);return x}
+
+function demoState(){
+  st=blankState(); st.demo=true; st.onboarded=true; st.terms=true; st.termsAcceptedAt={version:LEGAL_VERSION,when:new Date().toLocaleDateString('pt-BR')+' às '+nowHM()}; st.user.name='Bia';
+  st.perms={loc:false,notif:true,cal:false};
+  const P=(id,label,a)=>({id,label,address:a,...geocode(a)});
+  st.places=[P('casa','Casa','Rua Cubatão, 900 — Vila Mariana'),P('facul','Faculdade','Rua Itapeva, 300 — Bela Vista'),P('trab','Trabalho','Av. Brigadeiro Faria Lima, 2000 — Jardim Paulistano')];
+  st.routine=defaultRoutine(); st.selectedMode='bm';
+  const start=iso(addDays(mondayOf(new Date()),-7));
+  st.events=[{id:'ev-rotina',name:'Aula na faculdade',date:start,start:'08:00',end:'10:00',online:false,location:locFromPlace('facul'),repeat:'custom',days:[1,2,3,4,5],reminder:30,margin:10,considerAlarm:true,isRoutine:true}];
+  // dia planejado = próximo dia de rotina cujo alarme ainda não passou
+  let pd=null; for(let d=0;d<8&&!pd;d++){const x=addDays(new Date(),d);if(st.routine.days.includes(x.getDay())&&(d>0||nowMin()<toMin('06:00')))pd=iso(x)}
+  const pd1=iso(addDays(parseISO(pd),1));
+  const loc=a=>({label:a.split(' — ')[0],address:a,...geocode(a)});
+  st.events.push(
+    {id:'ev-reuniao',name:'Reunião do grupo de projeto',date:pd,start:'10:15',end:'11:15',online:false,location:loc('Rua dos Pinheiros, 870 — Pinheiros'),repeat:'none',days:[],reminder:15,margin:5,considerAlarm:false},
+    {id:'ev-estagio',name:'Estágio',date:pd,start:'14:00',end:'18:00',online:false,location:locFromPlace('trab'),repeat:'none',days:[],reminder:30,margin:10,considerAlarm:false},
+    {id:'ev-monitoria',name:'Monitoria de Estatística',date:pd,start:'19:00',end:'20:00',online:true,location:null,repeat:'none',days:[],reminder:30,margin:0,considerAlarm:false},
+    {id:'ev-treino',name:'Treino da atlética',date:pd1,start:'18:30',end:'20:00',online:false,location:loc('Av. Ibirapuera, 3103 — Moema'),repeat:'none',days:[],reminder:60,margin:10,considerAlarm:false},
+  );
+  const past=n=>iso(addDays(new Date(),-n));
+  st.history=[
+    {id:'h1',date:past(1),dest:'Faculdade',mode:'bm',planned:'07:50',actual:'07:48',answer:'yes'},
+    {id:'h2',date:past(2),dest:'Faculdade',mode:'bm',planned:'07:50',actual:'07:52',answer:'yes'},
+    {id:'h3',date:past(5),dest:'Faculdade',mode:'bus',planned:'07:50',actual:'08:04',answer:'no'},
+    {id:'h4',date:past(6),dest:'Faculdade',mode:'bm',planned:'07:50',actual:'',answer:'skip'},
+  ];
+  st.scenario='normal'; st.updatedAt=nowHM(); refresh();
+  st.notifs=[
+    {id:'n3',at:'Ontem, 17:40',title:'Há uma interrupção na linha do seu trajeto.',body:'A Linha 1-Azul operou com velocidade reduzida. Toque para comparar rotas.',target:{type:'route'},read:true},
+    {id:'n2',at:'Ontem, 07:15',title:'Está na hora de sair.',body:'Saia agora para chegar às 07:50 com ônibus + metrô.',target:{type:'trip'},read:true},
+    {id:'n4',at:`Lembrete · ${dayLabel(pd,true).replace(/^(Hoje|Amanhã), /,'')} 18:30`,title:'Seu próximo compromisso começa em 30 minutos.',body:'Monitoria de Estatística às 19:00 — online, sem deslocamento.',target:{type:'event',id:'ev-monitoria'},read:false},
+    {id:'n5',at:`Lembrete · ${dayLabel(pd,true).replace(/^(Hoje|Amanhã), /,'')}`,title:'Saia em 15 minutos.',body:'Reunião do grupo de projeto às 10:15 — Rua dos Pinheiros, 870. Toque para ver o compromisso.',target:{type:'event',id:'ev-reuniao'},read:false},
+  ];
+  st.scenario='rain'; st.updatedAt=nowHM(); refresh('O trajeto está mais demorado por causa da chuva.');
+  save();
+}
+function locFromPlace(id){const p=st.places.find(p=>p.id===id);return p?{placeId:p.id,label:p.label,address:p.address,x:p.x,y:p.y}:null}
+const placeById=id=>st.places.find(p=>p.id===id);
+
+/* ---------- motor de deslocamento (simulado) ---------- */
+const dist=(a,b)=>Math.hypot((a.x||0)-(b.x||0),(a.y||0)-(b.y||0));
+function ratioFor(a,b){const R=st.routine;const o=placeById(R?.originId),d=placeById(R?.destId);const base=(o&&d)?dist(o,d):5;const r=dist(a,b)/(base||5);return isFinite(r)?r:1}
+function duration(mode,sc,ratio){
+  // TODO: trocar por consulta de duração prevista para o horário de saída (Google Maps / SPTrans / Metrô-CPTM).
+  if(ratio<0.08) return 5;
+  const base=BASE[sc][mode],o=MODES[mode].overhead; return Math.max(5,Math.round((o+(base-o)*ratio)/5)*5);
+}
+const dataScenario=()=>st.scenario==='unavailable'?st.lastGoodScenario:st.scenario;
+function modeReason(sc,mode,dur,hab){
+  if(dur<=hab) return 'Tudo normal hoje. Seu horário não mudou.';
+  if(sc==='rain') return 'O trajeto está mais demorado por causa da chuva.';
+  if(sc==='disruption') return mode==='bm'?'Há uma interrupção na Linha 1-Azul, e ônibus + metrô ficou mais demorado.':mode==='bus'?'Os ônibus estão mais cheios por causa da interrupção no metrô.':'Mais carros nas ruas por causa da interrupção no metrô.';
+  return 'O trajeto está mais demorado hoje.';
+}
+function scaledSteps(mode,dur){const t=STEPS[mode];const tot=t.reduce((s,x)=>s+x[2],0);let acc=0;return t.map((x,i)=>{let m=i===t.length-1?dur-acc:Math.max(1,Math.round(x[2]*dur/tot));acc+=m;return[x[0],x[1],m]})}
+function allowedModes(){const ms=st.routine?.modes||[];return MODE_ORDER.filter(k=>MODES[k].needs.some(n=>ms.includes(n)))}
+
+/* ---------- compromissos ---------- */
+function occursOn(ev,d){if(ev.repeat==='none'||!ev.repeat)return ev.date===d; if(d<ev.date)return false; const w=parseISO(d).getDay(); return ev.repeat==='weekdays'?(w>=1&&w<=5):(ev.days||[]).includes(w)}
+const eventsOn=d=>st.events.filter(e=>occursOn(e,d)).sort((a,b)=>toMin(a.start)-toMin(b.start));
+function travelBetween(a,b){const sc=dataScenario();const r=ratioFor(a,b);const m=st.selectedMode;return Math.min(duration(m,sc,r),duration('bus',sc,r))}
+
+/* ---------- plano do dia ---------- */
+function planFor(dateIso,o={}){
+  const R=o.routine||st.routine; if(!R) return null;
+  const evs=eventsOn(dateIso).filter(e=>e.considerAlarm&&!e.online);
+  if(!evs.length) return {date:dateIso,none:true};
+  const ev=evs[0]; const origin=placeById(R.originId)||st.places[0]; const dest=ev.location||origin;
+  const ratio=ratioFor(origin,dest); const mode=o.mode||st.selectedMode;
+  const stale=st.scenario==='unavailable'; const sc=dataScenario();
+  const dur=duration(mode,sc,ratio), habDur=duration(mode,'normal',ratio);
+  const margin=o.margin!=null?o.margin:ev.margin; const prep=R.prep; const evT=toMin(ev.start);
+  const stop=o.stop!==undefined?o.stop:(st.stop&&st.stop.date===dateIso&&st.stop.leg==='commute'?st.stop:null);
+  const extra=stop?stop.extra:0;
+  const ideal=calculateRoutine({eventTime:evT,margin,travel:dur+(stop&&!stop.keep?extra:0),prep});
+  const hab=calculateRoutine({eventTime:evT,margin,travel:habDur,prep});
+  let alarm=ideal.wake,source='auto',note=null,conflict=false;
+  const manual=R.manual&&R.manual.date===dateIso?R.manual.time:null;
+  if(!R.alarmOn) source='off';
+  else if(manual){alarm=toMin(manual);source='manual'}
+  else if(!R.auto){alarm=hab.wake;source='fixed'}
+  else{
+    if(alarm>hab.wake&&!R.allowLater){alarm=hab.wake;note='Você não permite adiar o alarme, então mantivemos o horário habitual.'}
+    if(alarm<hab.wake&&!R.allowEarlier){alarm=hab.wake;note='Você não permite antecipar o alarme, então mantivemos o horário habitual.'}
+    if(alarm<toMin(R.earliest)){alarm=toMin(R.earliest);conflict=true}
+  }
+  const wake=source==='off'?ideal.wake:alarm;
+  const depart=Math.max(ideal.departure,wake+prep);
+  const arrival=depart+dur+extra; const slack=evT-arrival;
+  const status=slack>=margin?'ok':slack>=0?'warn':'late';
+  let reason=modeReason(sc,mode,dur,habDur); if(stop) reason+=` Inclui parada em ${stop.name} (+${extra} min).`;
+  return {date:dateIso,ev,origin,dest,mode,ratio,sc,stale,dur,habDur,margin,prep,evT,ideal,hab,alarm:source==='off'?null:alarm,wake,depart,arrival,slack,status,source,note,conflict,diff:hab.wake-wake,reason,stop,extra};
+}
+function nextPlan(o){
+  if(!st.routine) return null;
+  for(let d=0;d<14;d++){const di=iso(addDays(new Date(),d));const p=planFor(di,o);if(!p||p.none)continue;
+    if(d===0&&(nowMin()>=p.wake||nowMin()>=p.evT))continue; return p}
+  return null;
+}
+function refresh(reason){
+  const p=nextPlan();
+  if(p&&!reason&&p.dur<=p.habDur&&!p.stop) reason='As condições do trajeto voltaram ao normal.';
+  if(p&&p.alarm!=null){const t=fmt(p.alarm);
+    if(st.lastAlarm&&st.lastAlarm.date===p.date&&st.lastAlarm.time!==t){const diff=toMin(st.lastAlarm.time)-p.alarm;
+      st.changes.unshift({date:p.date,from:st.lastAlarm.time,to:t,reason:reason||p.reason,at:nowHM()}); st.changes=st.changes.slice(0,20);
+      if(st.prefs.notif.alarm) pushNotif(diff>0?`Seu alarme foi antecipado em ${diff} minutos.`:`Seu alarme foi adiado em ${-diff} minutos.`,`Novo horário: ${t} (antes ${st.lastAlarm.time}). ${reason||p.reason}`,{type:'alarm'});}
+    st.lastAlarm={date:p.date,time:t};}
+  if(p){const L=st.lastDur;const same=L&&L.date===p.date&&L.eventId===p.ev.id&&L.mode===p.mode;
+    if(same&&st.prefs.notif.travel){const delta=p.dur-L.dur;
+      if(p.stale&&!L.stale) pushNotif('Não conseguimos atualizar o tempo do trajeto.',`Mantivemos a última previsão (${L.dur} min). Confira antes de sair.`,{type:'route'});
+      else if(!p.stale&&Math.abs(delta)>=(st.prefs.travelMin||5)) pushNotif(delta>0?`Seu trajeto ficou ${delta} min mais longo.`:`Seu trajeto ficou ${-delta} min mais curto.`,`${MODES[p.mode].label} até ${p.ev.location?.label||p.ev.name}: agora ${p.dur} min (antes ${L.dur} min). ${reason||p.reason}`,{type:'route'});}
+    st.lastDur={date:p.date,eventId:p.ev.id,mode:p.mode,dur:p.dur,stale:p.stale};}
+  if(st.trip&&st.prefs.notif.travel){const T=st.trip;const d=duration(T.mode,dataScenario(),T.ratio);
+    if(T.lastDur!=null&&Math.abs(d-T.lastDur)>=(st.prefs.travelMin||5)&&st.scenario!=='unavailable'){const arr=T.depart+d+(T.extra||0);pushNotif(d>T.lastDur?`Trajeto em andamento: +${d-T.lastDur} min.`:`Trajeto em andamento: ${T.lastDur-d} min mais rápido.`,`Nova previsão de chegada: ${fmt(arr)} para ${T.destLabel} (compromisso às ${T.start}).`,{type:'trip'})}
+    T.lastDur=d;}
+  if(st.scenario!=='unavailable'){st.lastGoodScenario=st.scenario;st.lastGoodAt=st.updatedAt}
+  save();
+}
+function pushNotif(title,body,target){st.notifs.unshift({id:uid('n'),at:'Agora, '+nowHM(),title,body,target,read:false});st.notifs=st.notifs.slice(0,30)}
+
+function recommendRoute(sc,ratio){
+  const al=allowedModes(); const pool=al.length?al:MODE_ORDER;
+  let best=null; for(const m of pool){const d=duration(m,sc,ratio);
+    const k=[d,st.routine.pref==='transfers'?MODES[m].transfers:(MODES[m].walk??d)];
+    if(!best||k[0]<best.k[0]||(k[0]===best.k[0]&&k[1]<best.k[1]))best={m,k}}
+  return best?.m;
+}
+
+/* ---------- UI ---------- */
+let st=load()||blankState();
+const ui={view:st.onboarded?'today':'welcome',params:{},stack:[],modal:null,toast:null,agendaDate:null,agendaMode:'day',calMonth:null,rq:null,expanded:{},bf:{cat:'all',near:false},setup:null,eventDraft:null,alarmDraft:null,errors:{},plan:null};
+const TABS=['today','agenda','routes','benefits','profile'];
+const root=document.getElementById('root');document.documentElement.lang='pt-BR';
+let toastTimer=null;
+function toast(msg){ui.toast=msg;render();clearTimeout(toastTimer);toastTimer=setTimeout(()=>{ui.toast=null;render()},3200)}
+function go(view,params={},push=true){if(push&&ui.view!==view)ui.stack.push({view:ui.view,params:ui.params});ui.view=view;ui.params=params;ui.modal=null;render(true)}
+function tab(view){ui.stack=[];ui.view=view;ui.params={};ui.modal=null;render(true)}
+function back(){const s=ui.stack.pop();if(s){ui.view=s.view;ui.params=s.params}else ui.view='today';render(true)}
+function commit(reason,msg){refresh(reason);save();if(msg)toast(msg);else render()}
+
+function render(top){
+  const y=window.scrollY;
+  ui.plan=st.routine?nextPlan():null;
+  const V={welcome:vWelcome,setup:vSetup,today:vToday,alarm:vAlarm,agenda:vAgenda,event:vEvent,routes:vRoutes,trip:vTrip,benefits:vBenefits,benefit:vBenefit,legal:vLegal,notifs:vNotifs,profile:vProfile};
+  const noNav=['welcome','setup'].includes(ui.view)||(ui.view==='legal'&&ui.stack.some(x=>x.view==='setup'||x.view==='welcome'));
+  const tabOf={alarm:'today',notifs:'today',trip:'today',event:'agenda',benefit:'benefits',legal:'profile'}[ui.view]||ui.view;
+  root.innerHTML=`<div class="app ${noNav?'nonav':''}">${(V[ui.view]||vToday)()}</div>${noNav?'':nav(tabOf)}${modal()}${ui.toast?`<div class="toast" role="status">${esc(ui.toast)}</div>`:''}`;
+  window.scrollTo(0,top?0:y);
+}
+function nav(cur){const items=[['today','alarm','Hoje'],['agenda','cal','Agenda'],['routes','route','Rotas'],['benefits','tag','Benefícios'],['profile','user','Perfil']];
+  return `<nav class="nav" aria-label="Navegação principal">${items.map(([k,i,l])=>`<button class="navbtn ${cur===k?'on':''}" data-action="tab" data-v="${k}" ${cur===k?'aria-current="page"':''}>${icon(i,22)}<span>${l}</span></button>`).join('')}</nav>`}
+const unread=()=>st.notifs.filter(n=>!n.read).length;
+const bell=()=>`<button class="iconbtn" data-action="go" data-v="notifs" aria-label="Notificações${unread()?`, ${unread()} não lidas`:''}">${icon('bell')}${unread()?`<span class="badge">${unread()}</span>`:''}</button>`;
+const scenChip=()=>{const s=SCEN[st.scenario];return `<button class="scen" data-action="open-scen" aria-label="Trocar cenário de demonstração"><span class="dot ${s.tone}"></span>Cenário de demonstração: <b>${s.short}</b>${icon('down',14)}</button>`};
+const subhd=(title,right='')=>`<div class="subhd"><button class="iconbtn" data-action="back" aria-label="Voltar">${icon('back')}</button><h1 class="grow">${title}</h1>${right}</div>`;
+const sw=(on,action,label,extra='')=>`<button class="sw ${on?'on':''}" role="switch" aria-checked="${on}" aria-label="${esc(label)}" data-action="${action}" ${extra}></button>`;
+const statusPill=s=>s==='ok'?`<span class="pill green">${icon('check',14,2.4)}No horário</span>`:s==='warn'?`<span class="pill yellow">${icon('alert',14,2.2)}Atenção</span>`:`<span class="pill red">${icon('alert',14,2.2)}Risco de atraso</span>`;
+const logoMark=(s=22)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg>`;
+
+/* ===== TELA 1 — Boas-vindas ===== */
+function vWelcome(){
+  return `<div class="welcome">
+  <div class="stack-lg">
+    <div class="logo"><span class="mark">${logoMark()}</span>No Tempo</div>
+    <div class="stack">
+      <h1>Sua rotina se ajusta ao trânsito do dia</h1>
+      <p class="muted" style="font-size:17px">Descubra que horas acordar e sair para chegar no horário.</p>
+    </div>
+    <div class="illus" aria-hidden="true">${welcomeIllus()}</div>
+  </div>
+  <div class="stack">
+    <button class="btn btn-primary btn-block" data-action="start-setup">Configurar minha rotina</button>
+    <button class="btn btn-line btn-block" data-action="demo">Explorar demonstração</button>
+    <p class="xs faint center">Protótipo com dados simulados. Nenhuma conta é necessária.</p>
+  </div></div>`;
+}
+function welcomeIllus(){
+  return `<svg viewBox="0 0 340 170" role="img">
+  <rect x="0" y="0" width="340" height="170" rx="20" fill="var(--surface-2)"/>
+  <g stroke="var(--line)" stroke-width="1">${[30,60,90,120,150].map(y=>`<line x1="0" x2="340" y1="${y}" y2="${y}"/>`).join('')}${[40,100,160,220,280].map(x=>`<line y1="0" y2="170" x1="${x}" x2="${x}"/>`).join('')}</g>
+  <path d="M52 118 C 100 118, 110 70, 170 76 S 250 40, 290 52" fill="none" stroke="var(--blue)" stroke-width="4" stroke-dasharray="2 9" stroke-linecap="round"/>
+  <g><circle cx="52" cy="118" r="20" fill="var(--blue)"/><g transform="translate(40 106)" color="#fff">${icon('alarm',24,2).replace('class="ic"','')}</g></g>
+  <g><circle cx="170" cy="76" r="18" fill="var(--surface)" stroke="var(--blue)" stroke-width="2.5"/><g transform="translate(159 65)" color="var(--blue)">${icon('bus',22,2).replace('class="ic"','')}</g></g>
+  <g><circle cx="290" cy="52" r="18" fill="var(--green-dot)"/><g transform="translate(279 41)" color="#fff">${icon('school',22,2).replace('class="ic"','')}</g></g>
+  <g font-family="Bricolage Grotesque, Figtree, sans-serif" font-weight="700" fill="var(--ink)">
+    <text x="30" y="160" font-size="18">06:15</text><text x="150" y="122" font-size="18">07:00</text><text x="268" y="98" font-size="18">07:50</text></g>
+  <g font-family="Figtree, sans-serif" font-size="11" fill="var(--muted)" font-weight="600"><text x="82" y="160">acordar</text><text x="200" y="122">sair</text><text x="268" y="112">chegar</text></g>
+  </svg>`;
+}
+
+/* ===== TELA 2 — Configuração inicial ===== */
+function startSetup(edit){
+  const R=(edit&&st.routine)||defaultRoutine(); const o=edit?placeById('casa'):null, d=edit?placeById(R.destId||'facul'):null, w=edit?placeById('trab'):null;
+  ui.setup={step:1,edit:!!edit,data:{name:edit?(st.user.name||''):'',originLabel:o?.label||'Casa',originAddr:o?.address||'',destLabel:d?.label||'Faculdade',destAddr:d?.address||'',workAddr:(w&&w.id!==R.destId)?w.address:'',
+    arrive:R.arrive,days:[...R.days],prep:R.prep,margin:R.margin,modes:[...R.modes],pref:R.pref,auto:R.auto,earliest:R.earliest,allowEarlier:R.allowEarlier,allowLater:R.allowLater,
+    perms:edit?{...st.perms}:{loc:false,notif:false,cal:false},terms:edit?!!st.terms:false}};
+  ui.errors={}; go('setup',{},true);
+}
+const DAY_ORDER=[1,2,3,4,5,6,0];
+const dayChips=(sel,target)=>`<div class="chips" role="group" aria-label="Dias da semana">${DAY_ORDER.map(d=>`<button class="chip day ${sel.includes(d)?'on':''}" data-action="toggle-day" data-t="${target}" data-d="${d}" aria-pressed="${sel.includes(d)}" aria-label="${DOW_LONG[d]}">${DOW_INI[d]}</button>`).join('')}</div>`;
+const opts=(arr,cur,fmtf=x=>x)=>arr.map(v=>`<option value="${v}" ${String(v)===String(cur)?'selected':''}>${fmtf(v)}</option>`).join('');
+const PREP=[15,20,25,30,35,40,45,50,55,60,75,90], MARG=[0,5,10,15,20,30];
+function addrField(id,label,path,val,ph,hint){const e=ui.errors[path];return `<div class="field sugg-wrap"><label for="${id}">${label}</label>
+  <input class="inp ${e?'bad':''}" id="${id}" type="text" autocomplete="off" placeholder="${ph}" value="${esc(val)}" data-bind="${path}" data-sugg="1">
+  <div class="sugg" id="sugg-${id}"></div>${hint?`<span class="hint">${hint}</span>`:''}${e?`<span class="err">${e}</span>`:''}</div>`}
+function vSetup(){
+  const S=ui.setup, D=S.data, n=S.step, E=ui.errors;
+  const titles=['Locais','Horários','Transporte','Alarme','Permissões'];
+  let body='';
+  if(n===1) body=`
+    <div class="field"><label for="s-name">Como podemos te chamar? <span class="faint">(opcional)</span></label><input class="inp" id="s-name" value="${esc(D.name)}" data-bind="setup.data.name" placeholder="Seu nome"></div>
+    ${addrField('s-orig','De onde você sai?','setup.data.originAddr',D.originAddr,'Digite o endereço de casa','Você pode digitar o endereço sem liberar a localização.')}
+    ${addrField('s-dest','Para onde você vai?','setup.data.destAddr',D.destAddr,'Digite o endereço do destino')}
+    <div class="field"><span class="flabel">Nome do destino</span><div class="chips">${['Faculdade','Trabalho','Outro'].map(l=>`<button class="chip ${D.destLabel===l||(l==='Outro'&&!['Faculdade','Trabalho'].includes(D.destLabel))?'on':''}" data-action="dest-label" data-l="${l}">${l==='Faculdade'?icon('school',16):l==='Trabalho'?icon('work',16):icon('pin',16)}${l}</button>`).join('')}</div>
+      ${!['Faculdade','Trabalho'].includes(D.destLabel)?`<input class="inp" id="s-dlabel" value="${esc(D.destLabel==='Outro'?'':D.destLabel)}" placeholder="Ex.: Curso de inglês" data-bind="setup.data.destLabel">`:''}${E['setup.data.destLabel']?`<span class="err">${E['setup.data.destLabel']}</span>`:''}</div>
+    ${D.destLabel!=='Trabalho'?addrField('s-work','Trabalho <span class="faint">(opcional)</span>','setup.data.workAddr',D.workAddr,'Endereço do trabalho ou estágio','Fica salvo nos seus locais para usar na agenda.'):''}`;
+  if(n===2) body=`
+    <div class="field"><label for="s-arr">Horário em que precisa chegar</label><input class="inp" id="s-arr" type="time" value="${D.arrive}" data-bind="setup.data.arrive">${E['setup.data.arrive']?`<span class="err">${E['setup.data.arrive']}</span>`:''}</div>
+    <div class="field"><span class="flabel">Dias da semana dessa rotina</span>${dayChips(D.days,'setup')}${E['setup.data.days']?`<span class="err">${E['setup.data.days']}</span>`:''}</div>
+    <div class="grid2"><div class="field"><label for="s-prep">Tempo para se arrumar</label><select class="inp" id="s-prep" data-bind="setup.data.prep" data-num="1">${opts(PREP,D.prep,v=>v+' min')}</select></div>
+    <div class="field"><label for="s-marg">Margem na chegada</label><select class="inp" id="s-marg" data-bind="setup.data.margin" data-num="1">${opts(MARG,D.margin,v=>v+' min')}</select></div></div>
+    <p class="hint">A margem é o tempo de folga para chegar antes do compromisso. Com 10 min de margem e aula às 08:00, o app planeja sua chegada para 07:50.</p>`;
+  if(n===3){const M=[['bus','bus','Ônibus'],['metro','train','Metrô/trem'],['car','car','Carro'],['walk','walk','Caminhada'],['app','phone','Transporte por app']];
+    body=`<div class="field"><span class="flabel">Como você costuma ir?</span><span class="hint">Escolha mais de um para combinar, como ônibus e metrô.</span>
+      <div class="chips">${M.map(([k,i,l])=>`<button class="chip ${D.modes.includes(k)?'on':''}" data-action="toggle-mode" data-t="setup" data-m="${k}" aria-pressed="${D.modes.includes(k)}">${icon(i,16)}${l}</button>`).join('')}</div>${E['setup.data.modes']?`<span class="err">${E['setup.data.modes']}</span>`:''}</div>
+      ${D.modes.includes('bus')&&D.modes.includes('metro')?`<div class="alert green">${icon('check',16,2.2)}Vamos considerar trajetos que combinam ônibus e metrô.</div>`:''}
+      <div class="field"><span class="flabel">Você prefere</span><div class="seg"><button class="${D.pref==='walk'?'on':''}" data-action="set" data-p="setup.data.pref" data-val="walk">Menos caminhada</button><button class="${D.pref==='transfers'?'on':''}" data-action="set" data-p="setup.data.pref" data-val="transfers">Menos baldeações</button></div></div>`}
+  if(n===4){
+    const R={...defaultRoutine(),...D}; const prev=previewTimes(R);
+    body=`<div class="card flat"><div class="row between"><div><h3>Ajuste automático</h3><p class="small muted">O app muda o alarme conforme a previsão do trajeto.</p></div>${sw(D.auto,'set-bool','Ajuste automático','data-p="setup.data.auto"')}</div></div>
+    <div class="field"><label for="s-earl">Horário mais cedo permitido para acordar</label><input class="inp" id="s-earl" type="time" value="${D.earliest}" data-bind="setup.data.earliest"></div>
+    <div class="card flat stack"><div class="row between"><span>Pode antecipar o alarme</span>${sw(D.allowEarlier,'set-bool','Pode antecipar','data-p="setup.data.allowEarlier"')}</div>
+      <div class="row between"><span>Pode adiar em dias mais tranquilos</span>${sw(D.allowLater,'set-bool','Pode adiar','data-p="setup.data.allowLater"')}</div></div>
+    <div class="card tone-blue"><p class="eyebrow" style="color:var(--blue-ink)">Prévia dos horários</p>
+      <div class="stack-sm" style="margin-top:8px">${prev.map(p=>`<div class="row between"><span class="small">${p.label}</span><span class="tnum"><b>${p.wake}</b> acordar · <b>${p.dep}</b> sair</span></div>`).join('')}</div>
+      <p class="small" style="margin-top:10px">Seu alarme considera o tempo para se arrumar, o trajeto e sua margem de chegada.</p></div>`;
+  }
+  if(n===5){const P=[['loc','location','Localização','Ajuda a sugerir a origem quando você não está em casa. Você pode usar endereços digitados.'],['notif','bell','Notificações','Avisos de alarme alterado, mudança no tempo do trajeto, hora de sair e problemas na linha.'],['cal','cal','Calendário','Importar compromissos do seu calendário. Integração prevista para uma versão futura.']];
+    body=`${P.map(([k,i,t,d])=>`<div class="card flat"><div class="row top"><span class="ico-tile blue">${icon(i)}</span><div class="grow"><h3>${t}</h3><p class="small muted">${d}</p>
+      <div class="btnrow" style="margin-top:10px"><button class="btn btn-sm ${D.perms[k]?'btn-primary':'btn-line'}" data-action="perm" data-k="${k}" data-v="1">${D.perms[k]?icon('check',16,2.4)+'Permitido (simulado)':'Permitir'}</button><button class="btn btn-sm ${!D.perms[k]?'btn-soft':'btn-line'}" data-action="perm" data-k="${k}" data-v="0">Agora não</button></div></div></div></div>`).join('')}
+    <p class="hint">Sem permissões, tudo continua funcionando com configuração manual.</p>
+    <label class="check"><input type="checkbox" id="s-terms" ${D.terms?'checked':''} data-bind="setup.data.terms"><span class="small">Li e aceito os <a href="#" data-action="info" data-k="terms">termos de uso</a> e a <a href="#" data-action="info" data-k="privacy">política de privacidade</a>.</span></label>${E['setup.data.terms']?`<span class="err">${E['setup.data.terms']}</span>`:''}`;
+  }
+  return `<div class="stack-lg">
+    <div class="row between"><button class="iconbtn" data-action="${n===1?(S.edit||st.onboarded?'back':'to-welcome'):'setup-prev'}" aria-label="Voltar">${icon('back')}</button><span class="small muted">Etapa ${n} de 5</span><span style="width:42px"></span></div>
+    <div class="progress" aria-hidden="true">${[1,2,3,4,5].map(i=>`<span class="${i<=n?'on':''}"></span>`).join('')}</div>
+    <div><p class="eyebrow">${S.edit?'Editar rotina':'Configuração'}</p><h1>${titles[n-1]}</h1></div>
+    ${body}
+    <button class="btn btn-primary btn-block" data-action="${n<5?'setup-next':'setup-save'}">${n<5?'Continuar':'Salvar minha rotina'}</button>
+  </div>`;
+}
+function previewTimes(R){
+  const ev=toMin(R.arrive);
+  return [['Dia normal','normal'],['Com chuva','rain']].map(([l,sc])=>{const c=calculateRoutine({eventTime:ev,margin:R.margin,travel:BASE[sc][pickMode(R.modes)],prep:R.prep});let w=c.wake;if(R.auto&&w<toMin(R.earliest))w=toMin(R.earliest);return{label:`${l} · ${BASE[sc][pickMode(R.modes)]} min de trajeto`,wake:fmt(R.auto?w:calculateRoutine({eventTime:ev,margin:R.margin,travel:BASE.normal[pickMode(R.modes)],prep:R.prep}).wake),dep:fmt(c.departure)}});
+}
+function validateStep(n){const D=ui.setup.data,E={};
+  if(n===1){if(!D.originAddr.trim())E['setup.data.originAddr']='Informe de onde você sai.';if(!D.destAddr.trim())E['setup.data.destAddr']='Informe para onde você vai.';
+    if(D.originAddr.trim()&&norm(D.originAddr)===norm(D.destAddr))E['setup.data.destAddr']='Origem e destino precisam ser diferentes.';
+    if(!['Faculdade','Trabalho'].includes(D.destLabel)&&(!D.destLabel.trim()||D.destLabel==='Outro'))E['setup.data.destLabel']='Dê um nome ao destino.';}
+  if(n===2){if(!D.arrive)E['setup.data.arrive']='Informe o horário de chegada.';if(!D.days.length)E['setup.data.days']='Escolha pelo menos um dia.';}
+  if(n===3){if(!D.modes.length)E['setup.data.modes']='Escolha pelo menos um meio de transporte.';}
+  if(n===5){if(!D.terms)E['setup.data.terms']='Para salvar, aceite os termos e a política de privacidade.';}
+  ui.errors=E;return !Object.keys(E).length}
+function saveSetup(){
+  const D=ui.setup.data; const wasEdit=ui.setup.edit;
+  if(!wasEdit) st=blankState();
+  const before=st.lastAlarm?.time;
+  const up=(id,label,addr)=>{let p=placeById(id);const g=geocode(addr);if(p){Object.assign(p,{label,address:addr,...g})}else st.places.push({id,label,address:addr,...g})};
+  up('casa',D.originLabel||'Casa',D.originAddr.trim());
+  const destId=D.destLabel==='Trabalho'?'trab':'facul';
+  up(destId,D.destLabel,D.destAddr.trim());
+  if(D.workAddr.trim()&&destId!=='trab') up('trab','Trabalho',D.workAddr.trim());
+  st.user.name=D.name.trim(); st.perms={...D.perms}; if(!st.terms||!st.termsAcceptedAt)st.termsAcceptedAt={version:LEGAL_VERSION,when:new Date().toLocaleDateString('pt-BR')+' às '+nowHM()}; st.terms=true;
+  const R=st.routine||defaultRoutine();
+  Object.assign(R,{originId:'casa',destId,arrive:D.arrive,days:[...D.days],prep:D.prep,margin:D.margin,modes:[...D.modes],pref:D.pref,auto:D.auto,earliest:D.earliest,allowEarlier:D.allowEarlier,allowLater:D.allowLater,alarmOn:true});
+  st.routine=R; st.selectedMode=pickMode(D.modes);
+  let ev=st.events.find(e=>e.isRoutine);
+  const name=destId==='trab'?'Expediente no trabalho':D.destLabel==='Faculdade'?'Aula na faculdade':D.destLabel;
+  const endMin=toMin(D.arrive)+120;
+  const data={name,start:D.arrive,end:ev?(toMin(ev.end)>toMin(D.arrive)?ev.end:fmt(endMin)):fmt(endMin),online:false,location:locFromPlace(destId),repeat:'custom',days:[...D.days],margin:D.margin,considerAlarm:true,isRoutine:true};
+  if(ev) Object.assign(ev,data); else st.events.unshift({id:'ev-rotina',date:iso(addDays(mondayOf(new Date()),-7)),reminder:30,...data});
+  st.onboarded=true; if(!wasEdit){st.demo=false;st.scenario='normal';st.updatedAt=nowHM()}
+  refresh(wasEdit?'Você alterou sua rotina.':undefined);
+  ui.stack=[]; ui.view='today'; ui.setup=null;
+  const p=nextPlan(); toast(p&&p.alarm!=null?`Rotina salva. Alarme: ${fmt(p.alarm)}${before&&before!==fmt(p.alarm)?` (antes ${before})`:''}`:'Rotina salva.');
+}
+
+/* ===== TELA 3 — Hoje ===== */
+function vToday(){
+  const p=ui.plan; const h=new Date().getHours(); const g=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+  const head=`<header class="hd"><div><p class="eyebrow">${cap(dayLabel(todayISO()).replace('Hoje, ',''))}</p><h1>${g}${st.user.name?', '+esc(st.user.name):''}</h1></div><div class="hd-actions">${bell()}</div></header>
+    <div style="margin:2px 0 14px">${scenChip()}</div>${st.demo?`<div class="card tone-blue row between" style="margin-bottom:12px;padding:12px 14px"><p class="small grow"><b>Você está na demonstração.</b> Os dados são de exemplo.</p><button class="btn btn-sm btn-primary" data-action="start-setup">Configurar minha rotina</button></div>`:''}`;
+  if(!st.routine) return head+emptyBox('alarm','Sem rotina configurada','Configure sua rotina para calcular o alarme.',`<button class="btn btn-primary" data-action="start-setup">Configurar minha rotina</button>`);
+  if(!p) return head+emptyBox('cal','Nenhum compromisso presencial nos próximos dias','Adicione um compromisso e marque “Considerar no alarme”.',`<button class="btn btn-primary" data-action="new-event">Adicionar compromisso</button>`);
+  const R=st.routine; const chg=st.changes.find(c=>c.date===p.date);
+  const isToday=p.date===todayISO();
+  const seal=p.source==='off'?'Alarme desligado':p.source==='manual'?'Horário manual hoje':p.source==='fixed'?'Ajuste automático desativado':p.stale?'Previsão não atualizada':'Ajuste automático ativo';
+  const cmp=p.source==='off'?'Ative o alarme para receber a recomendação.':p.diff>0?`${minTxt(p.diff)} antes do habitual`:p.diff<0?`${minTxt(-p.diff)} depois do habitual`:'Mesmo horário do habitual';
+  const why=p.source==='manual'?`Você definiu ${fmt(p.alarm)} para este dia.`:p.source==='fixed'?`Horário fixo. Hoje o trajeto leva ${p.dur} min.`:(p.note||p.reason);
+  const rec=recommendRoute(p.sc,p.ratio);
+  let html=head+`
+  <section class="hero" aria-label="Seu próximo alarme"><div class="hero-arc"></div>
+    <p class="eyebrow">Seu próximo alarme · ${isToday?'hoje':dayLabel(p.date,true).replace('Amanhã, ','amanhã, ')}</p>
+    <div class="big ${p.source==='off'?'off':''}">${p.source==='off'?'Desligado':fmt(p.alarm)}</div>
+    <div style="margin-top:12px"><span class="seal ${p.stale||p.conflict?'warn':''}">${icon(p.stale?'offline':p.source==='auto'?'check':'clock',14,2.2)}${seal}</span></div>
+    <p class="cmp">${cmp}</p><p class="why">${esc(why)}</p>
+    <div class="chg">${chg?`<span>Antes <s>${chg.from}</s> → agora <b>${chg.to}</b></span>`:`<span>Habitual <b>${fmt(p.hab.wake)}</b></span>`}<span>${p.stale?`Última atualização válida: ${st.lastGoodAt}`:`Atualizado às ${st.updatedAt}`}</span></div>
+    <div class="acts"><button class="btn btn-hero" data-action="go" data-v="alarm">Ver cálculo</button><button class="btn btn-hero2" data-action="go" data-v="alarm" data-anchor="controls">Editar alarme</button></div>
+  </section>`;
+  if(p.source==='off') html+=`<div class="card tone-yellow stack-sm" style="margin-top:12px"><p class="ttl" style="font-weight:700">O alarme está desligado</p><p class="small">Os horários abaixo são apenas uma recomendação.</p><button class="btn btn-sm btn-line" style="align-self:flex-start" data-action="alarm-on">Ativar alarme</button></div>`;
+  if(p.stale) html+=`<div class="card tone-yellow stack-sm" style="margin-top:12px"><div class="row"><span class="ttl">${icon('offline',20)}</span><p class="ttl" style="font-weight:700">Não conseguimos atualizar a previsão</p></div><p class="small">Mantivemos o último horário válido, calculado às ${st.lastGoodAt}. Os dados de trânsito, clima e transporte abaixo não são atuais.</p><button class="btn btn-sm btn-line" style="align-self:flex-start" data-action="go" data-v="alarm" data-anchor="manual">Ajustar manualmente</button></div>`;
+  if(p.conflict) html+=conflictCard(p);
+  if(!p.stale&&rec&&rec!==st.selectedMode&&duration(rec,p.sc,p.ratio)<p.dur) html+=`<div class="card ${p.sc==='disruption'?'tone-red':'tone-yellow'} stack-sm" style="margin-top:12px"><p class="ttl" style="font-weight:700">${MODES[rec].label} é mais rápido hoje</p><p class="small">${MODES[st.selectedMode].label} leva ${p.dur} min; ${MODES[rec].label.toLowerCase()} leva ${duration(rec,p.sc,p.ratio)} min. Sua rota só muda se você escolher.</p><button class="btn btn-sm btn-line" style="align-self:flex-start" data-action="open-routes-plan">Comparar rotas</button></div>`;
+  html+=`<div class="stack" style="margin-top:12px">
+  <section class="card"><div class="card-hd"><h2>Sua manhã</h2>${statusPill(p.status)}</div>
+    <div class="morning">
+      ${mrow(fmt(p.wake),'Acordar','',true)}
+      ${mrow(fmt(p.wake)+'–'+fmt(p.wake+p.prep),'Preparar-se',`${p.prep} min`,false,true)}
+      ${mrow(fmt(p.depart),'Sair',`${modeIcons(p.mode,16)}`,true)}
+      ${p.stop?mrow('+'+p.extra+' min','Parada',esc(p.stop.name)):''}
+      ${mrow(fmt(p.arrival),'Chegada prevista',`${p.dur} min de trajeto`,true)}
+      ${mrow(fmt(p.evT),'Compromisso',esc(p.ev.name))}
+      ${mrow(p.slack+' min','Margem de chegada',p.slack<p.margin?`<span class="pill ${p.slack<0?'red':'yellow'}">meta ${p.margin} min</span>`:'')}
+    </div></section>
+  ${conditionsCard(p)}
+  <section class="card"><div class="card-hd"><h2>Próximo compromisso</h2><span class="small muted">${isToday?'Hoje':dayLabel(p.date,true)}</span></div>
+    <button class="tap row top" data-action="edit-event" data-id="${p.ev.id}"><span class="ico-tile blue">${icon(p.ev.isRoutine?'school':'cal')}</span><span class="grow"><b style="display:block">${esc(p.ev.name)}</b><span class="small muted tnum">${p.ev.start}–${p.ev.end}</span><span class="small muted" style="display:block">${esc(p.ev.location?.address||'')}</span></span></button>
+    <button class="btn btn-soft btn-block" style="margin-top:12px" data-action="open-routes-plan">${icon('route',18)}Ver trajeto</button></section>
+  <section class="card"><div class="card-hd"><h2>Seu dia</h2><span class="small muted">${dayLabel(p.date,true)}</span></div>
+    ${dayList(p.date,true)}
+    <button class="btn btn-line btn-block" style="margin-top:12px" data-action="open-agenda" data-d="${p.date}">Ver agenda completa</button></section>
+  </div>
+  <button class="btn btn-primary fab" data-action="start-trip">${icon(st.trip?'route':'play',18)}${st.trip?'Ver trajeto em andamento':'Iniciar trajeto'}</button>`;
+  return html;
+}
+const mrow=(t,l,r,key,sm)=>`<div class="mrow"><span class="mt ${key?'key':''} ${sm?'sm':''}">${t}</span><span class="ml">${l}</span><span class="mr small muted">${r}</span></div>`;
+function conflictCard(p){const ideal=fmt(p.ideal.wake),late=-p.slack;
+  return `<div class="card tone-red stack-sm" style="margin-top:12px"><p class="ttl" style="font-weight:700">Seu limite impede o horário ideal</p>
+  <p class="small">Para chegar com margem, seria preciso acordar às <b>${ideal}</b>. Seu limite é <b>${st.routine.earliest}</b>. Acordando às ${fmt(p.alarm)} e saindo às ${fmt(p.depart)}, a chegada prevista é <b>${fmt(p.arrival)}</b>${late>0?` — ${minTxt(late)} de atraso`:p.slack<p.margin?`, com só ${p.slack} min de margem`:''}.</p>
+  <div class="btnrow"><button class="btn btn-sm btn-line" data-action="go" data-v="alarm" data-anchor="controls">Revisar limite</button><button class="btn btn-sm btn-line" data-action="open-routes-plan">Comparar outra rota</button></div></div>`}
+function conditionsCard(p){
+  const S=SCEN[st.scenario]; const st0=st.scenario==='unavailable';
+  const row=(ic,l,v,t)=>`<div class="lrow"><span class="ico-tile">${icon(ic,18)}</span><span class="lbl" style="flex:none">${l}</span><span class="val row grow" style="gap:7px;justify-content:flex-end;text-align:right"><span class="dot ${t}"></span><span class="small" style="font-weight:650">${v}</span></span></div>`;
+  const na='Indisponível';
+  return `<section class="card"><div class="card-hd"><h2>Condições do trajeto</h2><span class="pill gray">Simulado</span></div>
+    ${st0?row('traffic','Trânsito',na,'gray')+row('cloud','Clima',na,'gray')+row('bus','Ônibus',na,'gray')+row('train','Metrô/trem',na,'gray')
+    :row('traffic','Trânsito',S.traffic[0],S.traffic[1])+row(S.weather[2],'Clima',S.weather[0],S.weather[1])+row('bus','Ônibus',S.bus[0],S.bus[1])+S.lines.map(l=>row('train',l[0],l[1],l[2])).join('')}
+    <p class="xs ${st0?'':'faint'}" style="margin-top:10px;${st0?'color:var(--yellow);font-weight:600':''}">${st0?`Previsão não atualizada. Última atualização válida às ${st.lastGoodAt}.`:`Última atualização: ${st.updatedAt} · previsões de demonstração`}</p></section>`;
+}
+function emptyBox(ic,t,d,btn=''){return `<div class="card empty"><span class="ico-tile blue">${icon(ic,24)}</span><h2>${t}</h2><p class="small">${d}</p>${btn}</div>`}
+
+/* lista do dia com deslocamentos */
+function dayList(d,compact){
+  const evs=eventsOn(d); if(!evs.length) return `<div class="empty" style="padding:14px 0"><p class="small">Nenhum compromisso neste dia.</p>${compact?'':`<button class="btn btn-soft btn-sm" data-action="new-event" data-d="${d}">${icon('plus',16)}Adicionar compromisso</button>`}</div>`;
+  const plan=planFor(d); let out=''; let lastIn=null, prev=null;
+  evs.forEach(ev=>{
+    if(!ev.online&&plan&&!plan.none&&plan.ev.id===ev.id&&!lastIn){
+      out+=`<button class="conn" data-action="open-routes-plan" data-d="${d}"><span>${icon('home',16)}</span><span class="box">Saída de casa <b>${fmt(plan.depart)}</b> · ${plan.dur} min de ${MODES[plan.mode].label.toLowerCase()}${plan.stale?' · última previsão':''}</span>${icon('chev',16)}</button>`;
+    } else if(prev){
+      if(toMin(ev.start)<toMin(prev.end)) out+=`<div class="conn red static"><span>${icon('alert',16)}</span><span class="box"><div class="warnbox">Horários sobrepostos com “${esc(prev.name)}”.</div></span></div>`;
+      else if(ev.online) out+=`<div class="conn static"><span>${icon('online',16)}</span><span class="box">Online · sem deslocamento</span></div>`;
+      else if(lastIn){
+        const stopX=(st.stop&&st.stop.date===d&&st.stop.leg===ev.id)?st.stop.extra:0;
+        const tr=travelBetween(lastIn.location,ev.location)+stopX; const avail=toMin(ev.start)-toMin(prev.end);
+        const tone=avail<tr?'red':avail<tr+(ev.margin||0)?'yellow':'';
+        const msg=avail<tr?`Você tem ${avail} minutos disponíveis, mas o trajeto leva ${tr}.`:tone?`Sobram ${avail-tr} min, menos que sua margem de ${ev.margin} min.`:'';
+        out+=`<button class="conn ${tone}" data-action="open-routes" data-from="${lastIn.id}" data-to="${ev.id}" data-d="${d}"><span>${icon('route',16)}</span><span class="box">Deslocamento previsto: <b>${tr} min</b>${stopX?` (inclui parada ${esc(st.stop.name)})`:''} · ${avail} min livres${msg?`<div class="warnbox">${msg}</div>`:''}</span>${icon('chev',16)}</button>`;
+      } else out+=`<div class="conn static"><span>${icon('pin',16)}</span><span class="box">Saindo de casa</span></div>`;
+    }
+    out+=evCard({...ev,_d:d});
+    if(!ev.online) lastIn=ev; prev=ev;
+  });
+  return `<div class="stack-sm">${out}</div>`;
+}
+function evCard(ev){return `<button class="ev ${ev.isRoutine?'routine':''}" data-action="edit-event" data-id="${ev.id}"><span class="when">${ev.start}<small>${ev.end}</small></span><span class="grow"><b style="display:block">${esc(ev.name)}</b><span class="small muted row" style="gap:5px">${icon(ev.online?'online':'pin',14)}${ev.online?'Online':esc(ev.location?.label||ev.location?.address||'')}</span>
+  <span class="row wrap" style="gap:6px;margin-top:6px">${ev.considerAlarm&&!ev.online?`<span class="pill blue">${icon('alarm',13)}No alarme</span>`:''}${ev.repeat!=='none'?`<span class="pill gray">${ev.repeat==='weekdays'?'Dias úteis':'Repete'}</span>`:''}${(()=>{const r=reminderInfo(ev,ev._d||ui.agendaDate||todayISO());return r?`<span class="pill gray">${icon('bell',13)}${fmt(r.at)}${ev.online?'':' · sair '+fmt(r.depart)}</span>`:''})()}</span></span></button>`}
+
+/* ===== TELA 4 — Alarme ===== */
+function makeAlarmDraft(){const R=st.routine;const p=ui.plan||nextPlan();return {days:[...R.days],prep:R.prep,margin:p&&!p.none?p.ev.margin:R.margin,earliest:R.earliest,allowLater:R.allowLater,allowEarlier:R.allowEarlier,auto:R.auto,sound:R.sound,manualTime:p&&p.alarm!=null?fmt(p.alarm):'06:30'}}
+function openAlarm(anchor){ui.alarmDraft=makeAlarmDraft();go('alarm',{anchor})}
+function vAlarm(){
+  const R=st.routine; if(!R) return subhd('Alarme inteligente')+emptyBox('alarm','Sem rotina','Configure sua rotina primeiro.');
+  const A=ui.alarmDraft||(ui.alarmDraft=makeAlarmDraft());
+  const draftR={...R,prep:A.prep,earliest:A.earliest,allowLater:A.allowLater,allowEarlier:A.allowEarlier,auto:A.auto};
+  const cur=ui.plan; if(!cur) return subhd('Alarme inteligente')+emptyBox('cal','Sem compromisso para calcular','Nenhum compromisso presencial marcado para o alarme.');
+  const p=planFor(cur.date,{routine:draftR,margin:A.margin});
+  const dirty=A.prep!==R.prep||A.margin!==cur.ev.margin||A.earliest!==R.earliest||A.allowLater!==R.allowLater||A.allowEarlier!==R.allowEarlier||A.auto!==R.auto||A.sound!==R.sound||A.days.join()!==R.days.join();
+  const lt=`${p.ev.start} − ${p.margin} min`;
+  return subhd('Alarme inteligente',sw(R.alarmOn,'toggle-alarm','Alarme ligado'))+`
+  <div class="stack">
+  ${!R.alarmOn?`<div class="alert yellow">${icon('alert',16)}O alarme está desligado. A recomendação continua visível.</div>`:''}
+  <section class="card"><div class="card-hd"><h2>Como calculamos</h2><span class="small muted">${dayLabel(p.date,true)}</span></div>
+    <div class="calc">
+      <div class="cl"><span>Compromisso</span><span>${p.ev.start}</span></div>
+      <div class="cl"><span class="op">Menos margem de chegada</span><span>− ${p.margin} min</span></div>
+      <div class="cl"><span>Chegada planejada <span class="faint xs">(${lt})</span></span><span>${fmt(p.evT-p.margin)}</span></div>
+      <div class="cl"><span class="op">Menos trajeto estimado${p.stale?' (última previsão)':''}</span><span>− ${p.dur}${p.stop&&!p.stop.keep?` + ${p.extra}`:''} min</span></div>
+      <div class="cl res"><span>Saída recomendada</span><span>${fmt(p.ideal.departure)}</span></div>
+      <div class="cl"><span class="op">Menos tempo para se arrumar</span><span>− ${p.prep} min</span></div>
+      <div class="cl res"><span>Alarme recomendado</span><span>${fmt(p.ideal.wake)}</span></div>
+      ${p.alarm!=null&&p.alarm!==p.ideal.wake?`<div class="cl res"><span>Alarme definido</span><span>${fmt(p.alarm)}</span></div>`:''}
+    </div>
+    <p class="xs faint" style="margin-top:8px">A duração do trajeto já considera chuva e trânsito previstos para o horário de saída. Nada é somado duas vezes.</p>
+  </section>
+  <section class="card"><div class="card-hd"><h2>O que mudou</h2>${statusPill(p.status)}</div>
+    <div class="lrow"><span class="lbl">Trajeto habitual</span><span class="val tnum">${p.habDur} min</span></div>
+    <div class="lrow"><span class="lbl">Trajeto previsto ${p.date===todayISO()?'hoje':'para '+DOW_LONG[parseISO(p.date).getDay()]}</span><span class="val tnum">${p.dur} min</span></div>
+    <div class="lrow"><span class="lbl">Ajuste</span><span class="val">${p.diff>0?`Acordar ${p.diff} min antes`:p.diff<0?`Acordar ${-p.diff} min depois`:'Sem mudança'}</span></div>
+    <div class="lrow"><span class="lbl">Motivo</span><span class="val small" style="max-width:60%">${esc(p.note||p.reason)}</span></div>
+    <div class="lrow"><span class="lbl">Última atualização</span><span class="val small">${p.stale?`${st.lastGoodAt} (não atualizado)`:st.updatedAt}</span></div>
+    ${st.changes.filter(c=>c.date===p.date).slice(0,3).map(c=>`<div class="alert gray">${icon('history',16)}<span>${c.at}: ${c.from} → <b>${c.to}</b>. ${esc(c.reason)}</span></div>`).join('')}
+  </section>
+  ${p.conflict?conflictCard(p):''}
+  <section class="card stack" id="controls"><h2>Controles</h2>
+    <div class="row between"><div><b>Ajuste automático</b><p class="small muted">Muda o alarme conforme a previsão.</p></div>${sw(A.auto,'set-bool','Ajuste automático','data-p="alarmDraft.auto"')}</div>
+    <div class="field"><span class="flabel">Dias da semana</span>${dayChips(A.days,'alarm')}</div>
+    <div class="grid2"><div class="field"><label for="a-prep">Tempo para se arrumar</label><select class="inp" id="a-prep" data-bind="alarmDraft.prep" data-num="1">${opts(PREP,A.prep,v=>v+' min')}</select></div>
+      <div class="field"><label for="a-marg">Margem de chegada</label><select class="inp" id="a-marg" data-bind="alarmDraft.margin" data-num="1">${opts(MARG,A.margin,v=>v+' min')}</select></div></div>
+    <div class="field"><label for="a-earl">Horário mais cedo permitido</label><input class="inp" id="a-earl" type="time" value="${A.earliest}" data-bind="alarmDraft.earliest"></div>
+    <div class="row between"><span>Pode antecipar o alarme</span>${sw(A.allowEarlier,'set-bool','Pode antecipar','data-p="alarmDraft.allowEarlier"')}</div>
+    <div class="row between"><span>Pode adiar em dias mais tranquilos</span>${sw(A.allowLater,'set-bool','Pode adiar','data-p="alarmDraft.allowLater"')}</div>
+    <div class="field"><label for="a-sound">Som do alarme <span class="pill gray">Demonstração</span></label><select class="inp" id="a-sound" data-bind="alarmDraft.sound">${opts(['Amanhecer','Sinos suaves','Rádio','Vibração apenas'],A.sound)}</select></div>
+    ${dirty?`<div class="alert gray">${icon('clock',16)}<span>Com essas alterações: alarme <b>${p.alarm!=null?fmt(p.alarm):'—'}</b>, saída <b>${fmt(p.depart)}</b>.</span></div>`:''}
+    <button class="btn btn-primary btn-block" data-action="save-alarm" ${dirty?'':'disabled'}>Salvar alterações</button>
+  </section>
+  <section class="card stack" id="manual"><h2>Horário manual</h2>
+    ${R.manual&&R.manual.date===cur.date?`<div class="alert yellow">${icon('clock',16)}<span>Usando ${R.manual.time} neste dia. A previsão continua visível, mas não muda o alarme.</span></div><button class="btn btn-line btn-block" data-action="clear-manual">Voltar ao ajuste automático</button>`
+    :`<div class="field"><label for="a-man">Horário para ${p.date===todayISO()?'hoje':dayLabel(p.date,true).toLowerCase()}</label><input class="inp" id="a-man" type="time" value="${A.manualTime}" data-bind="alarmDraft.manualTime"></div><button class="btn btn-line btn-block" data-action="set-manual">Usar horário manual hoje</button>`}
+  </section>
+  <section class="card stack-sm"><div class="row"><span class="ico-tile">${icon('sound',18)}</span><div class="grow"><b>Prévia do alarme</b><p class="small muted">Simulação visual. Nesta versão web o alarme não toca com o app fechado; a integração com o despertador do celular fica para a versão mobile.</p></div></div>
+    <button class="btn btn-soft btn-block" data-action="ring">Ver prévia</button></section>
+  </div>`;
+}
+
+/* ===== TELA 5 — Agenda ===== */
+function vAgenda(){
+  const sel=ui.agendaDate||(ui.plan?ui.plan.date:todayISO()); ui.agendaDate=sel;
+  const sd=parseISO(sel); const cm=ui.calMonth||{y:sd.getFullYear(),m:sd.getMonth()};
+  const first=new Date(cm.y,cm.m,1); const startG=mondayOf(first);
+  let cells=''; for(let i=0;i<42;i++){const d=addDays(startG,i);if(i>=35&&d.getMonth()!==cm.m)break;const di=iso(d);const has=eventsOn(di).length;
+    cells+=`<button class="${d.getMonth()!==cm.m?'out':''} ${di===todayISO()?'today':''} ${di===sel?'sel':''}" data-action="pick-day" data-d="${di}" aria-label="${dayLabel(di)}${has?`, ${has} compromissos`:''}">${d.getDate()}${has?'<i></i>':''}</button>`}
+  let main='';
+  if(ui.agendaMode==='day'){main=`<div class="section-title"><h2>${dayLabel(sel)}</h2></div>${dayList(sel)}`}
+  else{const mon=mondayOf(sd);main=`<div class="section-title"><h2>Semana de ${mon.getDate()}/${pad(mon.getMonth()+1)}</h2></div><div class="stack-sm">`+[0,1,2,3,4,5,6].map(i=>{const di=iso(addDays(mon,i));const evs=eventsOn(di);const c=dayConflicts(di);
+      return `<button class="ev" data-action="pick-day-week" data-d="${di}"><span class="when" style="min-width:64px">${DOW[parseISO(di).getDay()]}<small>${parseISO(di).getDate()}/${pad(parseISO(di).getMonth()+1)}</small></span><span class="grow">${evs.length?`<b style="display:block">${evs.length} compromisso${evs.length>1?'s':''}</b><span class="small muted">${evs.map(e=>e.start+' '+esc(e.name)).slice(0,2).join(' · ')}${evs.length>2?' …':''}</span>`:'<span class="small muted">Livre</span>'}
+        ${c?`<span class="row" style="margin-top:6px"><span class="pill ${c.red?'red':'yellow'}">${icon('alert',13)}${c.red?'Conflito de horário':'Pouca folga'}</span></span>`:''}</span>${icon('chev',16)}</button>`}).join('')+'</div>'}
+  return `<header class="hd"><div><p class="eyebrow">Agenda</p><h1>Minha agenda</h1></div><div class="hd-actions">${bell()}</div></header>
+  <button class="btn btn-primary btn-block" style="margin:10px 0 12px" data-action="new-event" data-d="${sel}">${icon('plus',18)}Adicionar compromisso</button>
+  <section class="card"><div class="row between" style="margin-bottom:8px"><button class="iconbtn" data-action="cal-nav" data-n="-1" aria-label="Mês anterior">${icon('back',18)}</button><b>${cap(MONTHS[cm.m])} ${cm.y}</b><button class="iconbtn" data-action="cal-nav" data-n="1" aria-label="Próximo mês">${icon('chev',18)}</button></div>
+    <div class="cal">${['S','T','Q','Q','S','S','D'].map(x=>`<span class="dh">${x}</span>`).join('')}${cells}</div>
+    <div class="seg" style="margin-top:12px"><button class="${ui.agendaMode==='day'?'on':''}" data-action="agenda-mode" data-v="day">Dia</button><button class="${ui.agendaMode==='week'?'on':''}" data-action="agenda-mode" data-v="week">Semana</button></div></section>
+  <div class="stack" style="margin-top:6px">${main}</div>`;
+}
+function dayConflicts(d){const evs=eventsOn(d);let red=false,yellow=false,lastIn=null,prev=null;
+  evs.forEach(ev=>{if(prev){if(toMin(ev.start)<toMin(prev.end))red=true;else if(!ev.online&&lastIn){const tr=travelBetween(lastIn.location,ev.location);const av=toMin(ev.start)-toMin(prev.end);if(av<tr)red=true;else if(av<tr+(ev.margin||0))yellow=true}}if(!ev.online)lastIn=ev;prev=ev});
+  return red||yellow?{red}:null}
+
+
+/* hora de sair para um compromisso: início − margem − trajeto (a partir do compromisso presencial anterior ou de casa) */
+function eventDeparture(ev,date){
+  if(ev.online||!ev.location) return null;
+  const plan=planFor(date); if(plan&&!plan.none&&plan.ev.id===ev.id) return {depart:plan.depart,travel:plan.dur,from:plan.origin.label||'Casa'};
+  const before=eventsOn(date).filter(e=>!e.online&&e.location&&e.id!==ev.id&&toMin(e.start)<toMin(ev.start));
+  const prev=before[before.length-1]; const origin=prev?prev.location:(placeById(st.routine?.originId)||st.places[0]); if(!origin) return null;
+  const travel=travelBetween(origin,ev.location); return {depart:toMin(ev.start)-(ev.margin||0)-travel,travel,from:prev?prev.name:(origin.label||'Casa'),prevEnd:prev?toMin(prev.end):null};
+}
+function reminderInfo(ev,date){
+  if(!ev.reminder) return null;
+  if(ev.online) return {at:toMin(ev.start)-ev.reminder,text:`${ev.reminder} min antes do início (online, sem deslocamento)`};
+  const d=eventDeparture(ev,date); if(!d) return null;
+  return {at:d.depart-ev.reminder,depart:d.depart,text:`${ev.reminder} min antes de sair`};
+}
+
+/* ===== TELA 6 — Compromisso ===== */
+function openEvent(id,date){
+  const ev=id?st.events.find(e=>e.id===id):null;
+  ui.eventDraft=ev?{...JSON.parse(JSON.stringify(ev)),locMode:ev.online?'online':ev.location?.placeId?'p:'+ev.location.placeId:'addr',addr:ev.location&&!ev.location.placeId?ev.location.address:''}
+    :{id:null,name:'',date:date||ui.agendaDate||todayISO(),start:'',end:'',online:false,location:null,locMode:'p:facul',addr:'',repeat:'none',days:[],reminder:15,margin:st.routine?.margin??10,considerAlarm:false};
+  if(!ev&&!placeById('facul'))ui.eventDraft.locMode=st.places[0]?'p:'+st.places[0].id:'addr';
+  ui.errors={}; go('event',{id});
+}
+function vEvent(){
+  const D=ui.eventDraft; if(!D) return subhd('Compromisso')+emptyBox('cal','Nada para editar','Volte para a agenda.');
+  const E=ui.errors; const editing=!!D.id;
+  const er=k=>E[k]?`<span class="err">${E[k]}</span>`:'';
+  return subhd(editing?'Editar compromisso':'Novo compromisso')+`<div class="stack-lg" style="margin-top:6px">
+  ${D.isRoutine?`<div class="alert gray">${icon('school',16)}<span>Este compromisso faz parte da sua rotina recorrente. Mudanças aqui valem para todos os dias dela.</span></div>`:''}
+  <div class="field"><label for="e-name">Nome</label><input class="inp ${E.name?'bad':''}" id="e-name" value="${esc(D.name)}" placeholder="Ex.: Aula de Microeconomia" data-bind="eventDraft.name">${er('name')}</div>
+  <div class="field"><label for="e-date">Data</label><input class="inp" id="e-date" type="date" value="${D.date}" data-bind="eventDraft.date">${er('date')}</div>
+  <div class="grid2"><div class="field"><label for="e-start">Início</label><input class="inp ${E.start?'bad':''}" id="e-start" type="time" value="${D.start}" data-bind="eventDraft.start">${er('start')}</div>
+    <div class="field"><label for="e-end">Término</label><input class="inp ${E.end?'bad':''}" id="e-end" type="time" value="${D.end}" data-bind="eventDraft.end">${er('end')}</div></div>
+  <div class="field"><span class="flabel">Local</span><div class="chips">${st.places.map(p=>`<button class="chip ${D.locMode==='p:'+p.id?'on':''}" data-action="set" data-p="eventDraft.locMode" data-val="p:${p.id}">${icon(p.id==='casa'?'home':p.id==='facul'?'school':p.id==='trab'?'work':'pin',16)}${esc(p.label)}</button>`).join('')}
+    <button class="chip ${D.locMode==='addr'?'on':''}" data-action="set" data-p="eventDraft.locMode" data-val="addr">${icon('pin',16)}Outro endereço</button><button class="chip ${D.locMode==='online'?'on':''}" data-action="set" data-p="eventDraft.locMode" data-val="online">${icon('online',16)}Online</button></div>
+    ${D.locMode==='addr'?addrField('e-addr','Endereço','eventDraft.addr',D.addr,'Digite o endereço'):''}
+    ${D.locMode==='online'?'<span class="hint">Compromissos online não geram deslocamento.</span>':''}${er('loc')}</div>
+  <div class="field"><span class="flabel">Repetição</span><div class="seg">${[['none','Nenhuma'],['weekdays','Dias úteis'],['custom','Personalizar']].map(([k,l])=>`<button class="${D.repeat===k?'on':''}" data-action="set" data-p="eventDraft.repeat" data-val="${k}">${l}</button>`).join('')}</div>
+    ${D.repeat==='custom'?dayChips(D.days,'event'):''}${er('days')}</div>
+  <div class="grid2"><div class="field"><label for="e-rem">Lembrete</label><select class="inp" id="e-rem" data-bind="eventDraft.reminder" data-num="1">${opts([0,5,10,15,30,60],D.reminder,v=>v?v+(D.locMode==='online'?' min antes do início':' min antes de sair'):'Sem lembrete')}</select></div>
+    <div class="field"><label for="e-marg">Margem de chegada</label><select class="inp" id="e-marg" data-bind="eventDraft.margin" data-num="1">${opts(MARG,D.margin,v=>v+' min')}</select></div></div>
+  ${remHint(D)}
+  <label class="check ${D.locMode==='online'?'faint':''}"><input type="checkbox" id="e-alarm" ${D.considerAlarm&&D.locMode!=='online'?'checked':''} ${D.locMode==='online'?'disabled':''} data-bind="eventDraft.considerAlarm"><span><b>Considerar este compromisso no alarme</b><span class="small muted" style="display:block">O alarme do dia passa a ser calculado pelo primeiro compromisso marcado.</span></span></label>
+  <div class="stack-sm"><button class="btn btn-primary btn-block" data-action="save-event">Salvar compromisso</button><button class="btn btn-line btn-block" data-action="back">Cancelar</button>
+    ${editing?`<button class="btn btn-danger btn-block" data-action="ask-delete" data-id="${D.id}">${icon('trash',18)}Excluir</button>`:''}</div></div>`;
+}
+function remHint(D){
+  if(!D.reminder) return '';
+  if(D.locMode==='online') return D.start?`<p class="hint">Online não tem deslocamento: o lembrete toca às <b>${fmt(toMin(D.start)-D.reminder)}</b>, ${D.reminder} min antes do início.</p>`:'';
+  if(!D.start||!D.date) return '<p class="hint">O lembrete conta a partir da hora de sair, que considera o trajeto e a margem.</p>';
+  const loc=D.locMode==='addr'?(D.addr.trim()?{address:D.addr,...geocode(D.addr)}:null):locFromPlace(D.locMode.slice(2)); if(!loc) return '';
+  const tmp={id:D.id||'__draft',start:D.start,margin:D.margin,online:false,location:loc,reminder:D.reminder};
+  const dep=eventDeparture(tmp,D.date); if(!dep) return '';
+  return `<p class="hint">Saída prevista às <b>${fmt(dep.depart)}</b> (${dep.travel} min saindo de ${esc(dep.from)}). Lembrete às <b>${fmt(dep.depart-D.reminder)}</b>.</p>`+(dep.prevEnd!=null&&dep.depart<dep.prevEnd?`<p class="err">A saída ideal (${fmt(dep.depart)}) é antes do fim de “${esc(dep.from)}” (${fmt(dep.prevEnd)}). Há risco de atraso.</p>`:'');
+}
+function saveEvent(){
+  const D=ui.eventDraft,E={};
+  if(!D.name.trim())E.name='Dê um nome ao compromisso.';
+  if(!D.date)E.date='Escolha a data.';
+  if(!D.start)E.start='Informe o início.';
+  if(!D.end)E.end='Informe o término.';
+  if(D.start&&D.end&&toMin(D.end)<=toMin(D.start))E.end='O término precisa ser depois do início.';
+  if(D.locMode==='addr'&&!D.addr.trim())E.loc='Informe o endereço ou escolha “Online”.';
+  if(D.repeat==='custom'&&!D.days.length)E.days='Escolha os dias da repetição.';
+  ui.errors=E; if(Object.keys(E).length){render();toast('Revise os campos destacados.');return}
+  const online=D.locMode==='online';
+  const location=online?null:D.locMode==='addr'?{label:D.addr.split(' — ')[0].split(',')[0],address:D.addr.trim(),...geocode(D.addr)}:locFromPlace(D.locMode.slice(2));
+  const before=st.lastAlarm?.time;
+  const data={name:D.name.trim(),date:D.date,start:D.start,end:D.end,online,location,repeat:D.repeat,days:D.repeat==='custom'?[...D.days]:[],reminder:D.reminder,margin:D.margin,considerAlarm:!online&&D.considerAlarm};
+  if(D.id){const ev=st.events.find(e=>e.id===D.id);Object.assign(ev,data);if(ev.isRoutine&&st.routine){st.routine.arrive=ev.start;st.routine.margin=ev.margin;if(ev.repeat==='custom')st.routine.days=[...ev.days]}}
+  else st.events.push({id:uid('ev'),...data});
+  refresh(D.id?`Você alterou “${data.name}”.`:`Novo compromisso: ${data.name}.`);
+  const p=nextPlan(); const now=p&&p.alarm!=null?fmt(p.alarm):null;
+  ui.agendaDate=D.date; ui.calMonth=null; ui.eventDraft=null; back();
+  toast(now&&before&&now!==before?`Compromisso salvo. Alarme recalculado: ${before} → ${now}`:'Compromisso salvo. Agenda atualizada.');
+}
+
+/* ===== TELA 7 — Rotas ===== */
+function defaultRQ(){const p=ui.plan;const o=placeById(st.routine?.originId)||st.places[0];
+  if(p)return{from:{...o,placeId:o.id},to:p.ev.location,arrive:p.ev.start,margin:p.ev.margin,mode:'all',date:p.date,eventId:p.ev.id};
+  const d=placeById(st.routine?.destId)||st.places[1]||o;return{from:{...o,placeId:o.id},to:{...d,placeId:d.id},arrive:st.routine?.arrive||'08:00',margin:st.routine?.margin||10,mode:'all',date:todayISO()}}
+function vRoutes(){
+  if(!st.places.length) return `<header class="hd"><div><p class="eyebrow">Rotas</p><h1>Rotas do dia</h1></div></header>`+emptyBox('route','Sem locais salvos','Configure sua rotina para comparar trajetos.',`<button class="btn btn-primary" data-action="start-setup">Configurar</button>`);
+  const q=ui.rq||(ui.rq=defaultRQ()); const sc=dataScenario(); const stale=st.scenario==='unavailable';
+  const ratio=ratioFor(q.from,q.to); const arrive=toMin(q.arrive||'08:00'); const margin=q.margin??10;
+  const isPlan=ui.plan&&q.eventId===ui.plan.ev.id&&q.date===ui.plan.date&&q.from.placeId===st.routine.originId;
+  const curDep=isPlan?ui.plan.depart:arrive-margin-duration(st.selectedMode,sc,ratio);
+  const rec=recommendRoute(sc,ratio); const al=allowedModes();
+  const filt={all:MODE_ORDER,public:['bm','bus'],car:['car'],app:['app'],walk:['walk']}[q.mode];
+  const placeOpts=(cur)=>st.places.map(p=>`<option value="p:${p.id}" ${cur.placeId===p.id?'selected':''}>${esc(p.label)} · ${esc(p.address.split(' — ')[0])}</option>`).join('')+(!cur.placeId?`<option value="cur" selected>${esc(cur.label||cur.address)}</option>`:'');
+  const cards=filt.map(m=>{
+    const d=duration(m,sc,ratio); const arr=curDep+d; const slack=arrive-arr; const s=slack>=margin?'ok':slack>=0?'warn':'late';
+    const recDep=arrive-margin-d; const wake=recDep-(st.routine?.prep||45);
+    const steps=scaledSteps(m,d); const alerts=(ALERTS[sc]||{})[m]||[];
+    const walkMin=MODES[m].walk==null?d:steps.filter(x=>x[0]==='walk').reduce((a,x)=>a+x[2],0);
+    const allowed=al.includes(m);
+    const recd=duration(rec,sc,ratio);
+    const why=m===rec?`Mais rápida entre os meios que você usa${st.routine.pref==='transfers'?', com menos baldeações':''}.`:!allowed?(d<recd?'Mais rápida, mas fora dos meios que você escolheu.':'Fora dos meios que você escolheu.'):d===recd?(st.routine.pref==='transfers'?'Mesmo tempo, porém com mais baldeações.':'Mesmo tempo, porém com mais caminhada.'):`${d-recd} min mais longa que a recomendada.`;
+    const sel=st.selectedMode===m; const open=ui.expanded[m];
+    const gm=`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(q.from.address+', São Paulo')}&destination=${encodeURIComponent(q.to.address+', São Paulo')}&travelmode=${MODES[m].gmaps}`;
+    return `<section class="card route ${sel?'sel':''}">
+      <div class="row between top"><div class="row" style="gap:6px;color:var(--blue-ink)">${modeIcons(m,20)}</div><div class="row" style="gap:6px">${m===rec?'<span class="pill green">Recomendada</span>':''}${sel?'<span class="pill blue">Em uso</span>':''}</div></div>
+      <p class="rtitle" style="margin-top:8px">${MODES[m].label} — ${d} min — chegada ${fmt(arr)}</p>
+      <div class="row wrap" style="gap:8px;margin-top:6px">${statusPill(s)}<span class="small muted">saindo às ${fmt(curDep)}${stale?' · última previsão':''}</span></div>
+      <div class="kv"><div><small>Saída recomendada</small><b>${fmt(recDep)}</b></div><div><small>Chegada prevista</small><b>${fmt(arrive-margin)}</b></div><div><small>Alarme</small><b>${fmt(wake)}</b></div></div>
+      <p class="small muted" style="margin-top:10px">${walkMin} min de caminhada · ${MODES[m].transfers?MODES[m].transfers+' baldeações':'sem baldeação'}</p>
+      ${alerts.map(a=>`<div class="alert ${a[0]}">${icon('alert',16)}<span>${a[1]}</span></div>`).join('')}
+      <p class="small" style="margin-top:8px"><b>Motivo:</b> ${why}</p>
+      ${open?`<div class="steps">${steps.map(x=>`<div class="step">${icon(x[0],18)}<span>${x[1]}</span><span class="m">${x[2]} min</span></div>`).join('')}</div>`:''}
+      <div class="btnrow" style="margin-top:12px">${sel?'':`<button class="btn btn-sm btn-primary" data-action="use-route" data-m="${m}">Usar esta rota</button>`}<button class="btn btn-sm btn-line" data-action="toggle-steps" data-m="${m}" aria-expanded="${!!open}">${open?'Ocultar etapas':'Ver etapas'}</button></div>
+      <a class="btn btn-sm btn-text" style="margin-top:4px" href="${gm}" target="_blank" rel="noopener">${icon('ext',16)}Abrir no Google Maps</a>
+    </section>`}).join('');
+  return `<header class="hd"><div><p class="eyebrow">${dayLabel(q.date)}</p><h1>Rotas do dia</h1></div><div class="hd-actions">${bell()}</div></header>
+  <div style="margin:2px 0 12px">${scenChip()}</div>
+  ${stale?`<div class="card tone-yellow stack-sm" style="margin-bottom:12px"><p class="ttl" style="font-weight:700">Previsão não atualizada</p><p class="small">As durações abaixo são da última previsão válida (${st.lastGoodAt}) e podem estar desatualizadas.</p></div>`:''}
+  <section class="card stack">
+    <div class="grid2"><div class="field"><label for="r-from">Origem</label><select class="inp" id="r-from" data-change="rq-place" data-k="from">${placeOpts(q.from)}</select></div>
+    <div class="field"><label for="r-to">Destino</label><select class="inp" id="r-to" data-change="rq-place" data-k="to">${placeOpts(q.to)}</select></div></div>
+    <div class="grid2"><div class="field"><label for="r-arr">Chegar até</label><input class="inp" id="r-arr" type="time" value="${q.arrive}" data-bind="rq.arrive"></div>
+    <div class="field"><label for="r-mode">Meio de transporte</label><select class="inp" id="r-mode" data-bind="rq.mode">${opts(['all','public','car','app','walk'],q.mode,v=>({all:'Todos',public:'Transporte público',car:'Carro',app:'Transporte por app',walk:'Caminhada'})[v])}</select></div></div>
+    ${dist(q.from,q.to)<0.05?'<p class="err">Origem e destino são o mesmo local.</p>':''}
+  </section>
+  <div class="map" style="margin-top:12px">${mapSvg(q)}<span class="mtag">Mapa ilustrativo · demonstração</span></div>
+  <p class="xs faint" style="margin:6px 2px 0">Este mapa não é navegação GPS. Use “Abrir no Google Maps” para navegar.</p>
+  <div class="stack" style="margin-top:12px">${cards}</div>`;
+}
+function mapSvg(q){
+  const W=340,H=180; const m=st.selectedMode; const col=m==='car'||m==='app'?'var(--ink)':m==='walk'?'var(--green-dot)':'var(--blue)';
+  const dis=st.scenario==='disruption'&&(m==='bm');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa ilustrativo de ${esc(q.from.label||'origem')} até ${esc(q.to.label||'destino')}">
+  <rect width="${W}" height="${H}" fill="var(--surface-2)"/>
+  <path d="M220 0 C 210 50, 250 90, 230 180" stroke="var(--line)" stroke-width="14" fill="none"/>
+  <ellipse cx="96" cy="44" rx="40" ry="22" fill="var(--green-soft)"/>
+  <g stroke="var(--line)" stroke-width="3">${[30,75,120,160].map(y=>`<line x1="0" x2="${W}" y1="${y}" y2="${y+8}"/>`).join('')}${[50,130,200,280].map(x=>`<line y1="0" y2="${H}" x1="${x}" x2="${x-10}"/>`).join('')}</g>
+  <path d="M48 140 L 92 136 L 128 102 L 196 96 L 236 60 L 290 44" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" ${m==='walk'?'stroke-dasharray="2 8"':''}/>
+  ${dis?`<g transform="translate(150 88)"><circle r="11" fill="var(--red-dot)"/><path d="M0-5v5M0 4v.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>`:''}
+  <circle cx="48" cy="140" r="9" fill="var(--surface)" stroke="var(--blue)" stroke-width="4"/>
+  <g transform="translate(290 44)"><circle r="12" fill="var(--blue)"/><circle r="4.5" fill="#fff"/></g>
+  <g font-family="Figtree, sans-serif" font-size="12" font-weight="700" fill="var(--ink)"><text x="32" y="166">${esc((q.from.label||'Origem').slice(0,22))}</text><text x="${W-12}" y="72" text-anchor="end">${esc((q.to.label||'Destino').slice(0,22))}</text></g>
+  </svg>`;
+}
+
+/* ===== TELA 8 — Trajeto em andamento ===== */
+function vTrip(){
+  const T=st.trip;
+  if(!T) return subhd('Trajeto')+emptyBox('route','Nenhum trajeto em andamento','Inicie pelo botão “Iniciar trajeto” na tela Hoje.',`<button class="btn btn-primary" data-action="start-trip">Iniciar trajeto</button>`);
+  const ev=st.events.find(e=>e.id===T.eventId); const sc=dataScenario();
+  const dur=duration(T.mode,sc,T.ratio)+(T.extra||0); const arr=T.depart+dur; const evT=toMin(T.start); const slack=evT-arr; const s=slack>=T.margin?'ok':slack>=0?'warn':'late';
+  const steps=scaledSteps(T.mode,duration(T.mode,sc,T.ratio)); const alerts=(ALERTS[sc]||{})[T.mode]||[];
+  return subhd('Trajeto em andamento')+`<div class="stack">
+  <section class="card"><p class="eyebrow">Destino</p><h2 style="margin-top:4px">${esc(T.destLabel)}</h2><p class="small muted">${esc(T.destAddr)}</p>
+    <div class="kv"><div><small>Compromisso</small><b>${T.start}</b></div><div><small>Previsão</small><b>${fmt(arr)}</b></div><div><small>Margem</small><b>${slack} min</b></div></div>
+    <div class="row between" style="margin-top:12px">${statusPill(s)}<span class="small muted">${modeIcons(T.mode,16)}</span></div>
+    <p class="xs faint" style="margin-top:8px">Simulação: saída considerada às ${fmt(T.depart)}. ${st.scenario==='unavailable'?'Previsão não atualizada.':'Troque o cenário para ver o status mudar.'}</p></section>
+  ${alerts.length?`<section class="card"><h2>Alertas da rota</h2>${alerts.map(a=>`<div class="alert ${a[0]}">${icon('alert',16)}<span>${a[1]}</span></div>`).join('')}</section>`:''}
+  <section class="card"><div class="card-hd"><h2>Etapas</h2><span class="small muted">${T.done.length}/${steps.length}</span></div>
+    <div class="steps">${steps.map((x,i)=>`<label class="step ${T.done.includes(i)?'done':''}" style="cursor:pointer"><input type="checkbox" ${T.done.includes(i)?'checked':''} data-change="trip-step" data-i="${i}" style="width:18px;height:18px;accent-color:var(--blue)">${icon(x[0],18)}<span>${x[1]}</span><span class="m">${x[2]} min</span></label>`).join('')}</div></section>
+  <div class="btnrow"><button class="btn btn-line" data-action="trip-alts">Ver alternativas</button><button class="btn btn-primary" data-action="finish-trip">${icon('flag',18)}Finalizar trajeto</button></div>
+  </div>`;
+}
+function startTrip(){
+  if(st.trip){go('trip');return}
+  const p=ui.plan; if(!p){toast('Nenhum compromisso presencial para iniciar trajeto.');return}
+  st.trip={eventId:p.ev.id,date:p.date,mode:p.mode,ratio:p.ratio,depart:p.depart,start:p.ev.start,margin:p.margin,destLabel:p.ev.location?.label||p.ev.name,destAddr:p.ev.location?.address||'',extra:p.extra,done:[],planned:fmt(p.arrival),lastDur:p.dur};
+  save(); go('trip');
+}
+
+/* ===== TELA 9 — Benefícios ===== */
+function vBenefits(){
+  const head=`<header class="hd"><div><p class="eyebrow">Benefícios</p><h1>Benefícios no caminho</h1><p class="muted" style="margin-top:4px">Paradas que cabem na sua rotina</p></div><div class="hd-actions">${bell()}</div></header>`;
+  if(!st.prefs.partners) return head+emptyBox('tag','Sugestões de parceiros desativadas','Você desativou as sugestões em Privacidade. Seus trajetos continuam iguais.',`<button class="btn btn-soft" data-action="partners-on">Ativar sugestões</button>`);
+  const F=ui.bf; const list=PARTNERS.filter(p=>(F.cat==='all'||p.cat===F.cat)&&(!F.near||p.dist<=500));
+  const chips=[['all','Todos'],['cafe','Café'],['almoco','Almoço'],['outros','Outros']];
+  return head+`<div class="chips" style="margin:12px 0">${chips.map(([k,l])=>`<button class="chip ${F.cat===k?'on':''}" data-action="bf-cat" data-v="${k}">${l}</button>`).join('')}<button class="chip ${F.near?'on':''}" data-action="bf-near" aria-pressed="${F.near}">${icon('route',16)}Próximos da rota</button></div>
+  ${st.stop?`<div class="alert blue" style="background:var(--blue-soft);color:var(--blue-ink);margin-bottom:12px">${icon('pin',16)}<span>Parada incluída: <b>${esc(st.stop.name)}</b> (+${st.stop.extra} min). <a href="#" data-action="remove-stop">Remover</a></span></div>`:''}
+  <div class="stack">${list.length?list.map(p=>`<button class="card partner tap" style="padding:14px" data-action="go" data-v="benefit" data-id="${p.id}"><div class="row top"><span class="logo">${icon(p.cat==='cafe'?'coffee':p.cat==='almoco'?'food':'box',22)}</span><span class="grow"><span class="row between"><b>${esc(p.name)}</b><span class="pill gray">Parceiro</span></span>
+    <span class="small muted" style="display:block">${p.catLabel} · ${p.dist<1000?p.dist+' m':(p.dist/1000).toFixed(1).replace('.',',')+' km'} do trajeto · +${p.extra} min</span>
+    <span style="display:block;margin-top:6px;font-weight:650;color:var(--blue-ink)">${esc(p.offer)}</span><span class="btn btn-sm btn-soft" style="margin-top:10px">Ver benefício</span></span></div></button>`).join('')
+    :emptyBox('tag','Nenhum parceiro com esses filtros','Tente outra categoria ou desative “Próximos da rota”.',`<button class="btn btn-line btn-sm" data-action="bf-reset">Limpar filtros</button>`)}</div>
+  <p class="xs faint" style="margin-top:14px">Ofertas de demonstração. Parceiros nunca alteram sua rota sem sua confirmação e não recebem seus trajetos individuais.</p>`;
+}
+function vBenefit(){
+  const p=PARTNERS.find(x=>x.id===ui.params.id); if(!p) return subhd('Benefício')+emptyBox('tag','Benefício não encontrado','');
+  const added=st.stop&&st.stop.partnerId===p.id;
+  return subhd('Benefício')+`<div class="stack">
+  <section class="card stack"><div class="row top"><span class="logo" style="width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--blue-soft);color:var(--blue-ink)">${icon(p.cat==='cafe'?'coffee':p.cat==='almoco'?'food':'box',26)}</span><div class="grow"><h2>${esc(p.name)}</h2><p class="small muted">${p.catLabel} · <span class="pill gray">Parceiro</span></p></div></div>
+    <p style="font-size:18px;font-weight:700;color:var(--blue-ink)">${esc(p.offer)}</p>
+    <div class="lrow"><span class="ico-tile">${icon('pin',18)}</span><span class="lbl">Endereço</span><span class="val small">${esc(p.address)}</span></div>
+    <div class="lrow"><span class="ico-tile">${icon('route',18)}</span><span class="lbl">Distância do trajeto</span><span class="val small">${p.dist<1000?p.dist+' m':(p.dist/1000).toFixed(1).replace('.',',')+' km'}</span></div>
+    <div class="lrow"><span class="ico-tile">${icon('clock',18)}</span><span class="lbl">Tempo adicional</span><span class="val small">+${p.extra} min</span></div>
+    <div class="lrow"><span class="ico-tile">${icon('cal',18)}</span><span class="lbl">${p.leg==='lunch'?'Melhor momento':'Encaixe'}</span><span class="val small">${p.leg==='lunch'?'Intervalo de almoço':'No caminho da manhã'}</span></div></section>
+  <section class="card stack"><h2>Cupom</h2><p class="small muted">${esc(p.terms)} ${esc(p.valid)}.</p><div class="code" id="coupon">${p.code}</div>
+    <button class="btn btn-line btn-block" data-action="copy" data-code="${p.code}">${icon('copy',18)}Copiar cupom</button></section>
+  ${added?`<button class="btn btn-danger btn-block" data-action="remove-stop">Remover parada</button>`:`<button class="btn btn-primary btn-block" data-action="ask-stop" data-id="${p.id}">${icon('plus',18)}Adicionar parada</button>`}
+  <p class="xs faint">Antes de incluir, mostramos como a parada afeta sua chegada. A rota nunca muda sem sua confirmação.</p></div>`;
+}
+function lunchLeg(d){const evs=eventsOn(d);let prev=null,lastIn=null;for(const ev of evs){if(prev&&!ev.online&&lastIn&&toMin(prev.end)>=toMin('11:00')&&toMin(prev.end)<=toMin('14:00'))return{from:lastIn,to:ev,prev};if(!ev.online)lastIn=ev;prev=ev}return null}
+
+/* ===== TELA 10 — Notificações ===== */
+function vNotifs(){
+  return subhd('Notificações',st.notifs.some(n=>!n.read)?`<button class="btn btn-sm btn-text" data-action="read-all">Marcar lidas</button>`:'')+`<div class="stack-sm" style="margin-top:4px">
+  ${st.notifs.length?st.notifs.map(n=>`<button class="card tap" style="padding:14px;${n.read?'':'border-color:var(--blue)'}" data-action="open-notif" data-id="${n.id}"><div class="row top"><span class="ico-tile ${n.read?'':'blue'}">${icon(n.target?.type==='alarm'?'alarm':n.target?.type==='event'?'cal':n.target?.type==='trip'?'walk':'train',18)}</span><span class="grow"><span class="row between"><b>${esc(n.title)}</b>${n.read?'':'<span class="dot" style="background:var(--blue)"></span>'}</span><span class="small muted" style="display:block">${esc(n.body)}</span><span class="xs faint" style="display:block;margin-top:4px">${esc(n.at)}</span></span></div></button>`).join('')
+  :emptyBox('bell','Nenhuma notificação','Avisos de alarme, hora de sair e problemas na linha aparecem aqui.')}
+  ${st.notifs.length?`<button class="btn btn-text" data-action="clear-notifs" style="align-self:center">Limpar notificações</button>`:''}</div>`;
+}
+
+/* ===== TELA 11 — Perfil ===== */
+function vProfile(){
+  const R=st.routine; const H=st.history; const ok=H.filter(h=>h.answer==='yes').length, ans=H.filter(h=>h.answer!=='skip').length;
+  const M=[['bus','bus','Ônibus'],['metro','train','Metrô/trem'],['car','car','Carro'],['walk','walk','Caminhada'],['app','phone','App']];
+  const N=[['alarm','Alarme alterado'],['travel','Mudança no tempo do trajeto'],['leave','Hora de sair'],['disruption','Problemas na linha'],['event','Lembretes de compromissos']];
+  const sec=(t,ic,body,id)=>`<section class="card" ${id?`id="${id}"`:''}><div class="row" style="margin-bottom:10px"><span class="ico-tile blue">${icon(ic,18)}</span><h2 class="grow">${t}</h2></div>${body}</section>`;
+  return `<header class="hd"><div><p class="eyebrow">Perfil</p><h1>${st.user.name?esc(st.user.name):'Seu perfil'}</h1></div><div class="hd-actions">${bell()}</div></header>
+  <div class="stack" style="margin-top:10px">
+  ${sec('Dados básicos','user',`<div class="field"><label for="p-name">Nome</label><input class="inp" id="p-name" value="${esc(st.user.name)}" data-change="set-name" placeholder="Seu nome"></div>`)}
+  ${sec('Locais salvos','pin',st.places.map(p=>`<div class="lrow"><span class="ico-tile">${icon(p.id==='casa'?'home':p.id==='facul'?'school':p.id==='trab'?'work':'pin',18)}</span><span class="grow"><b style="display:block">${esc(p.label)}</b><span class="small muted">${esc(p.address)}</span></span><button class="iconbtn" data-action="edit-place" data-id="${p.id}" aria-label="Editar ${esc(p.label)}">${icon('edit',18)}</button></div>`).join('')+`<button class="btn btn-soft btn-sm" style="margin-top:8px" data-action="edit-place">${icon('plus',16)}Adicionar local</button>`)}
+  ${R?sec('Rotinas recorrentes','history',`<div class="lrow"><span class="grow"><b style="display:block">${esc(st.events.find(e=>e.isRoutine)?.name||'Rotina')}</b><span class="small muted">${R.days.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(d=>DOW[d]).join(', ')} · chegar ${R.arrive} · ${R.prep} min para se arrumar · margem ${R.margin} min</span></span></div><button class="btn btn-line btn-sm" style="margin-top:8px" data-action="edit-routine">Editar rotina</button>`):''}
+  ${R?sec('Preferências de transporte','bus',`<div class="chips">${M.map(([k,i,l])=>`<button class="chip ${R.modes.includes(k)?'on':''}" data-action="toggle-mode" data-t="profile" data-m="${k}" aria-pressed="${R.modes.includes(k)}">${icon(i,16)}${l}</button>`).join('')}</div>
+    <div class="seg" style="margin-top:10px"><button class="${R.pref==='walk'?'on':''}" data-action="set-pref" data-v="walk">Menos caminhada</button><button class="${R.pref==='transfers'?'on':''}" data-action="set-pref" data-v="transfers">Menos baldeações</button></div>`):''}
+  ${R?sec('Configurações do alarme','alarm',`<div class="lrow"><span class="lbl">Ajuste automático</span><span class="val">${R.auto?'Ativo':'Desativado'}</span></div><div class="lrow"><span class="lbl">Mais cedo permitido</span><span class="val">${R.earliest}</span></div><div class="lrow"><span class="lbl">Som</span><span class="val">${esc(R.sound)}</span></div><button class="btn btn-line btn-sm" style="margin-top:8px" data-action="go" data-v="alarm">Abrir alarme inteligente</button>`):''}
+  ${sec('Notificações','bell',N.map(([k,l])=>`<div class="lrow"><span class="lbl" style="color:var(--ink)">${l}${k==='travel'?'<span class="xs muted" style="display:block">Avisa quando a previsão do próximo trajeto muda.</span>':''}</span>${sw(st.prefs.notif[k],'toggle-notif',l,`data-k="${k}"`)}</div>${k==='travel'&&st.prefs.notif.travel?`<div class="field" style="padding:0 0 10px"><label for="p-tmin" class="small">Avisar a partir de</label><select class="inp" id="p-tmin" data-change="travel-min">${opts([5,10,15,20],st.prefs.travelMin||5,v=>v+' min de diferença')}</select></div>`:''}`).join('')+`<p class="xs faint" style="margin-top:6px">Notificações deste protótipo aparecem apenas dentro do app.</p>`)}
+  ${sec('Integração com calendário','cal',`<div class="row between"><p class="small muted grow">Importar aulas e reuniões do Google Agenda ou Outlook.</p><span class="pill yellow">Futuro</span></div><button class="btn btn-line btn-sm" style="margin-top:10px" data-action="info" data-k="calendar">Saber mais</button>`)}
+  ${sec('Histórico de trajetos','history',H.length?`<p class="small" style="margin-bottom:6px"><b>${ok} de ${ans}</b> trajetos respondidos chegaram no horário.</p>`+H.map(h=>`<div class="lrow"><span class="dot ${h.answer==='yes'?'green':h.answer==='no'?'red':'gray'}"></span><span class="grow"><b class="small">${dayLabel(h.date,true)} · ${esc(h.dest)}</b><span class="xs muted" style="display:block">${MODES[h.mode]?.label||''} · previsto ${h.planned}${h.actual?` · real ${h.actual}`:''}</span></span><span class="small muted">${h.answer==='yes'?'No horário':h.answer==='no'?'Atrasou':'Não informado'}</span></div>`).join('')
+    :`<p class="small muted">Nenhum trajeto registrado. Ao finalizar um trajeto, você pode informar se chegou no horário.</p>`)}
+  ${sec('Privacidade','shield',`<ul class="small muted" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px"><li>Usamos origem, destino, horários, tempo para se arrumar e preferências de transporte para calcular seus horários.</li><li>Não coletamos qualidade do sono nem dados de saúde.</li><li>Não mostramos seus trajetos individuais para empresas ou parceiros.</li><li>Neste protótipo, tudo fica salvo apenas neste navegador.</li></ul>
+    <div class="lrow" style="margin-top:8px"><span class="lbl" style="color:var(--ink)">Sugerir origem pela localização</span>${sw(st.prefs.locSuggest,'toggle-pref','Sugerir origem pela localização','data-k="locSuggest"')}</div>
+    <div class="lrow"><span class="lbl" style="color:var(--ink)">Sugestões de parceiros no caminho</span>${sw(st.prefs.partners,'toggle-pref','Sugestões de parceiros','data-k="partners"')}</div>
+    <div class="lrow" style="margin-top:4px"><button class="tap row between" data-action="info" data-k="terms"><span>Termos de Uso</span>${icon('chev',16)}</button></div><div class="lrow"><button class="tap row between" data-action="info" data-k="privacy"><span>Política de Privacidade</span>${icon('chev',16)}</button></div>${st.termsAcceptedAt?`<p class="xs faint">Aceito em ${esc(st.termsAcceptedAt.when)} · versão ${esc(st.termsAcceptedAt.version)}</p>`:''}
+    <div class="btnrow" style="margin-top:10px"><button class="btn btn-sm btn-line" data-action="ask-clear-history" ${H.length?'':'disabled'}>Apagar histórico</button><button class="btn btn-sm btn-danger" data-action="ask-reset">Excluir dados locais</button></div>`,'privacy')}
+  ${sec('Ajuda','help',`<details class="faq"><summary>Como o alarme é calculado?</summary><p>Partimos do horário do compromisso, tiramos a margem de chegada e a duração prevista do trajeto para achar a saída. Depois tiramos o tempo para se arrumar para achar a hora de acordar.</p></details>
+    <details class="faq"><summary>O alarme toca com o app fechado?</summary><p>Não nesta versão. Este protótipo web mostra o alarme como simulação visual. A integração com o despertador nativo do celular está prevista para a versão mobile.</p></details>
+    <details class="faq"><summary>De onde vêm os dados de trânsito?</summary><p>Neste protótipo, trânsito, clima, ônibus e metrô são simulados. A versão real deve usar fontes como mapas, transporte público e previsão do tempo.</p></details>
+    <details class="faq"><summary>E se os dados não atualizarem?</summary><p>Mantemos o último horário válido, avisamos que a previsão não foi atualizada e você pode ajustar manualmente.</p></details>`)}
+  ${sec('Demonstração','play',`<p class="small muted">Troque o cenário para ver alarme, cards e rotas mudarem.</p><div class="btnrow" style="margin-top:10px"><button class="btn btn-sm btn-soft" data-action="open-scen">Trocar cenário</button><button class="btn btn-sm btn-line" data-action="demo">Restaurar demonstração</button></div><button class="btn btn-primary btn-block" style="margin-top:10px" data-action="start-setup">Configurar minha própria rotina</button><p class="xs faint" style="margin-top:6px">Ao salvar, os dados da demonstração são substituídos pela sua rotina.</p>`)}
+  <p class="xs faint center">No Tempo · protótipo v0.1 · dados simulados</p></div>`;
+}
+
+
+/* ===== Termos de Uso e Política de Privacidade ===== */
+const LEGAL_VERSION='0.1', LEGAL_DATE='7 de outubro de 2026';
+const LEGAL={
+ terms:{title:'Termos de Uso',intro:'Estes Termos regulam o uso do aplicativo No Tempo. Ao marcar “Li e aceito”, você concorda com as regras abaixo.',sections:[
+  ['1. O que é o No Tempo',['O No Tempo é um aplicativo que combina seus compromissos, o tempo que você leva para se arrumar, a previsão de deslocamento, o clima e a situação do transporte para recomendar que horas acordar, que horas sair e qual trajeto seguir.','O serviço é oferecido por [razão social], inscrita no CNPJ [número], com sede em São Paulo/SP (“No Tempo”, “nós”).']],
+  ['2. Quem pode usar',['O aplicativo é voltado a pessoas com 18 anos ou mais. Pessoas entre 16 e 18 anos podem usar com autorização de um responsável legal.','Você se compromete a informar dados verdadeiros e a manter suas configurações atualizadas.']],
+  ['3. Como as recomendações funcionam',['Os horários sugeridos são estimativas. Eles dependem de dados de terceiros (trânsito, transporte público e clima) que podem mudar a qualquer momento, chegar atrasados ou ficar indisponíveis.','O No Tempo não garante que você chegará no horário. A decisão final sobre quando acordar, sair e qual caminho seguir é sempre sua.','Quando os dados não puderem ser atualizados, o aplicativo mantém o último horário válido e avisa que a previsão não é atual.']],
+  ['4. Alarme',['O alarme só muda dentro dos limites que você definir, como o horário mais cedo permitido e a permissão para antecipar ou adiar.','Na versão web, o alarme é uma simulação visual e não toca com o aplicativo fechado. Não use esta versão como seu único despertador. A integração com o alarme nativo do celular está prevista para a versão mobile.']],
+  ['5. Segurança no trajeto',['Não use o aplicativo enquanto dirige ou pedala. Siga sempre a sinalização, as leis de trânsito e as orientações das empresas de transporte.','O mapa exibido no aplicativo é ilustrativo e não substitui um serviço de navegação. Para navegar, use o link para um aplicativo de mapas.']],
+  ['6. Parceiros e benefícios',['O aplicativo pode sugerir paradas de estabelecimentos parceiros no seu caminho. Essas sugestões são identificadas como “Parceiro”.','Uma parada só entra no seu trajeto depois que você confirmar. O No Tempo nunca altera sua rota automaticamente por publicidade.','Ofertas, cupons, preços e validade são de responsabilidade de cada parceiro. Problemas com produtos ou serviços devem ser resolvidos diretamente com o estabelecimento.','Você pode desativar as sugestões de parceiros a qualquer momento em Perfil › Privacidade.']],
+  ['7. Uso adequado',['Não é permitido usar o aplicativo para fins ilegais, tentar acessar dados de outras pessoas, copiar ou modificar o aplicativo, ou interferir no seu funcionamento.']],
+  ['8. Propriedade intelectual',['A marca, o design, os textos e o código do No Tempo pertencem a [razão social]. O uso do aplicativo não transfere nenhum desses direitos a você.']],
+  ['9. Limitação de responsabilidade',['Na medida permitida pela lei, o No Tempo não se responsabiliza por atrasos, faltas ou prejuízos causados por mudanças no trânsito, no transporte ou no clima, por falhas de serviços de terceiros, ou por configurações informadas incorretamente.','Nada nestes Termos limita os direitos garantidos pelo Código de Defesa do Consumidor.']],
+  ['10. Encerramento',['Você pode parar de usar o aplicativo e excluir seus dados a qualquer momento em Perfil › Privacidade › Excluir dados locais.','Podemos suspender o acesso de quem descumprir estes Termos.']],
+  ['11. Alterações',['Podemos atualizar estes Termos. Se a mudança for relevante, avisaremos no aplicativo e pediremos um novo aceite.']],
+  ['12. Lei e foro',['Estes Termos seguem as leis do Brasil. Fica eleito o foro do domicílio do usuário para resolver eventuais conflitos.']],
+  ['13. Contato',['Dúvidas sobre estes Termos: [e-mail de contato].']],
+ ]},
+ privacy:{title:'Política de Privacidade',intro:'Esta Política explica quais dados o No Tempo usa, por que usa e como você controla essas informações, de acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018, LGPD).',sections:[
+  ['1. Quem é responsável pelos seus dados',['O controlador dos dados é [razão social], CNPJ [número]. O encarregado de proteção de dados pode ser contatado em [e-mail do encarregado].']],
+  ['2. Dados que usamos',['Dados que você informa: nome ou apelido (opcional), endereços salvos (como Casa, Faculdade e Trabalho), compromissos, horários, dias da rotina, tempo para se arrumar, margem de chegada, meios de transporte e preferências de alarme.','Dados de uso do aplicativo: rotas escolhidas, paradas confirmadas e o registro opcional de chegada no horário (histórico de trajetos).','Localização: somente se você permitir, e apenas para sugerir sua origem quando você não estiver em casa. Sem essa permissão, você pode digitar os endereços.','Calendário: somente se você conectar um calendário, recurso previsto para uma versão futura.']],
+  ['3. Dados que não coletamos',['Não coletamos qualidade do sono, dados de saúde, dados biométricos, contatos, fotos ou dados de pagamento.']],
+  ['4. Para que usamos',['Calcular a hora de acordar e de sair, comparar rotas e avisar sobre mudanças no seu trajeto (execução do serviço que você solicitou).','Enviar notificações de alarme, hora de sair e problemas na linha (com base no seu consentimento, que pode ser retirado nas configurações).','Sugerir paradas de parceiros no caminho (com base no seu consentimento, que pode ser desativado em Privacidade).','Melhorar as estimativas a partir do seu histórico de chegada (legítimo interesse, sempre com a opção de apagar o histórico).']],
+  ['5. Com quem compartilhamos',['Não vendemos seus dados.','Parceiros não recebem seu nome, seus endereços nem seus trajetos individuais. Quando você usa um cupom, o parceiro sabe apenas que o cupom foi utilizado.','Para calcular trajetos, consultas a serviços de mapas, transporte e clima podem incluir origem, destino e horário, sem identificar você.','Indicadores para empresas, faculdades ou órgãos públicos, se existirem, serão sempre agregados e anonimizados, sem permitir identificar uma pessoa.','Podemos compartilhar dados quando exigido por lei ou ordem judicial.']],
+  ['6. Onde ficam e por quanto tempo',['Nesta versão, seus dados ficam salvos apenas neste navegador, no seu aparelho. Nós não recebemos uma cópia.','Você pode apagar o histórico ou excluir todos os dados locais a qualquer momento em Perfil › Privacidade. Na versão com conta, os dados serão mantidos enquanto a conta estiver ativa e excluídos após o pedido de exclusão, salvo obrigação legal.']],
+  ['7. Seus direitos',['Pela LGPD, você pode: confirmar se tratamos seus dados; acessar e corrigir seus dados; pedir anonimização, bloqueio ou exclusão; pedir a portabilidade; saber com quem compartilhamos; retirar o consentimento; e se opor a tratamentos que considere irregulares.','Para exercer esses direitos, use as opções do aplicativo ou escreva para [e-mail do encarregado]. Você também pode registrar reclamação na Autoridade Nacional de Proteção de Dados (ANPD).']],
+  ['8. Segurança',['Adotamos medidas técnicas e organizacionais para proteger seus dados. Nenhum sistema é totalmente seguro; se houver um incidente que possa causar risco relevante, avisaremos você e a ANPD.']],
+  ['9. Menores de idade',['O aplicativo é destinado a pessoas com 18 anos ou mais. O uso por pessoas entre 16 e 18 anos depende de autorização de um responsável legal.']],
+  ['10. Alterações nesta Política',['Se esta Política mudar de forma relevante, avisaremos no aplicativo antes de a mudança valer.']],
+ ]},
+};
+function vLegal(){
+  const k=ui.params.k==='privacy'?'privacy':'terms'; const L=LEGAL[k];
+  return subhd('Termos e privacidade')+`<div class="seg" style="margin:6px 0 14px"><button class="${k==='terms'?'on':''}" data-action="legal-tab" data-k="terms">Termos de Uso</button><button class="${k==='privacy'?'on':''}" data-action="legal-tab" data-k="privacy">Privacidade</button></div>
+  <article class="card legal"><h2 style="font-size:22px">${L.title}</h2><p class="xs faint" style="margin-top:4px">Versão ${LEGAL_VERSION} · atualizada em ${LEGAL_DATE}</p>
+  <p style="margin-top:12px">${L.intro}</p>
+  ${L.sections.map(([h,ps])=>`<h3 style="margin-top:20px">${h}</h3>${ps.map(p=>`<p class="muted" style="margin-top:8px">${esc(p)}</p>`).join('')}`).join('')}
+  </article>
+  ${st.termsAcceptedAt?`<p class="xs faint center" style="margin-top:12px">Você aceitou a versão ${esc(st.termsAcceptedAt.version)} em ${esc(st.termsAcceptedAt.when)}.</p>`:''}
+  ${ui.stack.some(s=>s.view==='setup')?`<button class="btn btn-primary btn-block" style="margin-top:14px" data-action="legal-accept">Li e aceito</button>`:''}`;
+}
+
+/* ===== Modais ===== */
+function modal(){
+  const M=ui.modal; if(!M) return '';
+  if(M.type==='ring'){const p=ui.plan;return `<div class="ring" role="dialog" aria-label="Prévia do alarme"><div class="pulse">${icon('alarm',56,1.8)}</div><div class="big">${p&&p.alarm!=null?fmt(p.alarm):'--:--'}</div><p style="font-size:18px;font-weight:650">Hora de acordar</p><p style="max-width:300px;opacity:.9">${esc(p?.reason||'')} Saia às ${p?fmt(p.depart):'--:--'}.</p><p class="xs" style="opacity:.75;max-width:300px">Simulação visual. Nenhum som é tocado e o alarme não funciona com o app fechado nesta versão.</p><button class="btn btn-hero" style="min-width:200px" data-action="close">Parar</button></div>`}
+  let inner='';
+  if(M.type==='scen') inner=`<h2>Cenário de demonstração</h2><p class="small muted">Simula as condições do trajeto. Os dados não são reais.</p><div class="stack-sm">${Object.entries(SCEN).map(([k,s])=>`<button class="card tap" style="padding:14px;${st.scenario===k?'outline:2px solid var(--blue)':''}" data-action="set-scen" data-v="${k}"><div class="row"><span class="dot ${s.tone}"></span><span class="grow"><b style="display:block">${s.label}</b><span class="small muted">${s.desc}</span></span>${st.scenario===k?icon('check',18,2.4):''}</div></button>`).join('')}</div>`;
+  if(M.type==='route'){inner=`<h2>Trocar para ${MODES[M.m].label.toLowerCase()}?</h2><div class="cmp2"><div class="old"><small>Alarme atual</small><b>${M.before.alarm}</b><small>saída ${M.before.dep}</small></div>${icon('chev',20)}<div><small>Novo alarme</small><b>${M.after.alarm}</b><small>saída ${M.after.dep}</small></div></div><p class="small">Motivo: ${MODES[M.m].label} leva ${M.after.dur} min${M.after.dur!==M.before.dur?` (antes ${M.before.dur} min)`:''}. Chegada prevista ${M.after.arr}.</p><div class="stack-sm"><button class="btn btn-primary btn-block" data-action="confirm-route" data-m="${M.m}">Usar esta rota</button><button class="btn btn-line btn-block" data-action="close">Cancelar</button></div>`}
+  if(M.type==='delete') inner=`<h2>Excluir compromisso?</h2><p class="small muted">${M.routine?'Este é o compromisso da sua rotina. Ao excluir, o alarme deixa de ser calculado para ele em todos os dias.':M.repeat?'Todas as repetições deste compromisso serão excluídas.':'Esta ação não pode ser desfeita.'}</p><div class="stack-sm"><button class="btn btn-danger btn-block" data-action="confirm-delete" data-id="${M.id}">Excluir</button><button class="btn btn-line btn-block" data-action="close">Cancelar</button></div>`;
+  if(M.type==='stop') inner=stopModal(M);
+  if(M.type==='finish') inner=`<h2>Você chegou no horário?</h2><div class="seg">${[['yes','Sim'],['no','Não'],['skip','Não informar']].map(([k,l])=>`<button class="${M.answer===k?'on':''}" data-action="finish-ans" data-v="${k}">${l}</button>`).join('')}</div><div class="field"><label for="f-time">Horário real de chegada <span class="faint">(opcional)</span></label><input class="inp" id="f-time" type="time" value="${M.time||''}" data-bind="modal.time"></div><p class="xs faint">Usado apenas no seu histórico de demonstração.</p><div class="stack-sm"><button class="btn btn-primary btn-block" data-action="confirm-finish">Salvar e finalizar</button><button class="btn btn-line btn-block" data-action="close">Continuar trajeto</button></div>`;
+  if(M.type==='reset') inner=`<h2>Excluir dados locais?</h2><p class="small muted">Apaga rotina, compromissos, histórico e preferências deste navegador. Você volta para a tela de boas-vindas.</p><div class="stack-sm"><button class="btn btn-danger btn-block" data-action="confirm-reset">Excluir tudo</button><button class="btn btn-line btn-block" data-action="close">Cancelar</button></div>`;
+  if(M.type==='clear-history') inner=`<h2>Apagar histórico?</h2><p class="small muted">Remove os registros de chegada. Sua rotina continua igual.</p><div class="stack-sm"><button class="btn btn-danger btn-block" data-action="confirm-clear-history">Apagar histórico</button><button class="btn btn-line btn-block" data-action="close">Cancelar</button></div>`;
+  if(M.type==='place') inner=`<h2>${M.id?'Editar local':'Novo local'}</h2><div class="field"><label for="pl-label">Nome</label><input class="inp" id="pl-label" value="${esc(M.label)}" data-bind="modal.label" placeholder="Ex.: Academia"></div>${addrField('pl-addr','Endereço','modal.address',M.address,'Digite o endereço')}${M.err?`<p class="err">${M.err}</p>`:''}<div class="stack-sm"><button class="btn btn-primary btn-block" data-action="save-place">Salvar local</button>${M.id&&!['casa',st.routine?.destId].includes(M.id)?`<button class="btn btn-danger btn-block" data-action="delete-place" data-id="${M.id}">Remover local</button>`:''}<button class="btn btn-line btn-block" data-action="close">Cancelar</button></div>`;
+  if(M.type==='info'){const T={calendar:['Integração com calendário','Na versão futura, você poderá conectar Google Agenda ou Outlook para importar compromissos automaticamente. Por enquanto, adicione compromissos pela Agenda.'],terms:['Termos de uso (resumo)','Este é um protótipo de demonstração. Os horários são estimativas com dados simulados e não garantem a chegada no horário.'],privacy:['Política de privacidade (resumo)','Usamos seus dados de rotina para calcular seus horários. Não coletamos dados de sono ou saúde. Não compartilhamos seu trajeto individual com parceiros. Indicadores para empresas e faculdades, se existirem, serão sempre agregados e anônimos.']}[M.k];inner=`<h2>${T[0]}</h2><p class="small muted">${T[1]}</p><button class="btn btn-primary btn-block" data-action="close">Entendi</button>`}
+  return `<div class="scrim" data-action="scrim"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${inner}</div></div>`;
+}
+function stopModal(M){
+  const p=PARTNERS.find(x=>x.id===M.id); const d=ui.plan?.date;
+  if(p.leg==='lunch'){const L=d&&lunchLeg(d);
+    if(!L) return `<h2>Sem intervalo de almoço com deslocamento</h2><p class="small muted">No dia planejado não há um deslocamento entre compromissos no horário de almoço. A parada não foi adicionada.</p><button class="btn btn-line btn-block" data-action="close">Fechar</button>`;
+    const tr=travelBetween(L.from.location,L.to.location);const avail=toMin(L.to.start)-toMin(L.prev.end);const left=avail-tr-p.extra;
+    const tone=left<0?'red':left<L.to.margin?'yellow':'green';
+    return `<h2>Incluir ${esc(p.name)}?</h2><p class="small muted">No deslocamento até <b>${esc(L.to.name)}</b> (${L.to.start}).</p><div class="cmp2"><div><small>Folga hoje</small><b>${avail-tr} min</b></div>${icon('chev',20)}<div><small>Com a parada</small><b>${left} min</b></div></div>
+    <div class="alert ${tone}">${icon(tone==='green'?'check':'alert',16)}<span>${left<0?`Você chegaria ${-left} min atrasado em ${esc(L.to.name)}.`:left<L.to.margin?`A parada reduz sua folga para ${left} min, abaixo da margem de ${L.to.margin} min.`:`Cabe na sua rotina: sobram ${left} min.`}</span></div>
+    <div class="stack-sm"><button class="btn btn-primary btn-block" data-action="confirm-stop" data-id="${p.id}" data-leg="${L.to.id}">Incluir parada</button><button class="btn btn-line btn-block" data-action="close">Cancelar</button></div>`;}
+  const base=ui.plan; if(!base) return `<h2>Sem trajeto planejado</h2><button class="btn btn-line btn-block" data-action="close">Fechar</button>`;
+  const stopObj=(keep)=>({partnerId:p.id,name:p.name,extra:p.extra,keep,date:base.date,leg:'commute'});
+  const k=planFor(base.date,{stop:stopObj(true)}), a=planFor(base.date,{stop:stopObj(false)});
+  const tone=k.slack<0?'red':k.slack<k.margin?'yellow':'green';
+  return `<h2>Incluir ${esc(p.name)}?</h2><p class="small muted">Parada no caminho para ${esc(base.ev.name)} · +${p.extra} min</p>
+  <div class="cmp2"><div class="old"><small>Chegada atual</small><b>${fmt(base.arrival)}</b><small>margem ${base.slack} min</small></div>${icon('chev',20)}<div><small>Com a parada</small><b>${fmt(k.arrival)}</b><small>margem ${k.slack} min</small></div></div>
+  <div class="alert ${tone}">${icon(tone==='green'?'check':'alert',16)}<span>${k.slack<0?`Saindo às ${fmt(base.depart)}, você chegaria ${-k.slack} min atrasado.`:k.slack<k.margin?`Saindo às ${fmt(base.depart)}, sua margem cai de ${base.slack} para ${k.slack} min.`:'Cabe na sua margem.'}</span></div>
+  <div class="stack-sm"><button class="btn btn-primary btn-block" data-action="confirm-stop" data-id="${p.id}" data-keep="0">Incluir e sair às ${fmt(a.depart)}${a.alarm!=null?` (alarme ${fmt(a.alarm)})`:''}</button>
+  <button class="btn btn-line btn-block" data-action="confirm-stop" data-id="${p.id}" data-keep="1">Incluir e manter saída às ${fmt(base.depart)}</button>
+  <button class="btn btn-text btn-block" data-action="close">Cancelar</button></div>${a.conflict?`<p class="xs" style="color:var(--red)">Seu limite para acordar (${st.routine.earliest}) impede antecipar o alarme o suficiente.</p>`:''}`;
+}
+
+/* ---------- ações ---------- */
+function getPath(o,p){return p.split('.').reduce((a,k)=>a?.[k],o)}
+function setPath(o,p,v){const ks=p.split('.');const last=ks.pop();const t=ks.reduce((a,k)=>a[k],o);t[last]=v}
+function readVal(el){if(el.type==='checkbox')return el.checked;if(el.dataset.num)return Number(el.value);return el.value}
+const A={
+  tab:d=>tab(d.v),
+  go:(d)=>{if(d.v==='alarm'){openAlarm(d.anchor);if(d.anchor)setTimeout(()=>document.getElementById(d.anchor)?.scrollIntoView({block:'start'}),30);return}go(d.v,{id:d.id})},
+  back:()=>back(),
+  close:()=>{ui.modal=null;render()},
+  scrim:(d,el,e)=>{if(e.target===el){ui.modal=null;render()}},
+  demo:()=>{demoState();ui.stack=[];ui.view='today';ui.rq=null;ui.agendaDate=null;ui.calMonth=null;ui.modal=null;toast('Demonstração carregada: chuva no trajeto.')},
+  'start-setup':()=>startSetup(false),
+  'edit-routine':()=>startSetup(true),
+  'to-welcome':()=>{ui.view=st.onboarded?'today':'welcome';ui.stack=[];render(true)},
+  'setup-next':()=>{if(validateStep(ui.setup.step))ui.setup.step++;render(true)},
+  'setup-prev':()=>{ui.setup.step--;ui.errors={};render(true)},
+  'setup-save':()=>{if(validateStep(5))saveSetup();else render()},
+  'dest-label':d=>{ui.setup.data.destLabel=d.l;render()},
+  'toggle-day':d=>{const t={setup:ui.setup?.data,alarm:ui.alarmDraft,event:ui.eventDraft}[d.t];const n=+d.d;t.days=t.days.includes(n)?t.days.filter(x=>x!==n):[...t.days,n];render()},
+  'toggle-mode':d=>{const t=d.t==='setup'?ui.setup.data:st.routine;t.modes=t.modes.includes(d.m)?t.modes.filter(x=>x!==d.m):[...t.modes,d.m];
+    if(d.t==='profile'){if(!t.modes.length){t.modes=[d.m];toast('Mantenha pelo menos um meio de transporte.');return} if(!allowedModes().includes(st.selectedMode))st.selectedMode=pickMode(t.modes); commit('Você mudou suas preferências de transporte.')}else render()},
+  'set-pref':d=>{st.routine.pref=d.v;commit()},
+  set:d=>{setPath(ui,d.p,d.val);render()},
+  'set-bool':d=>{setPath(ui,d.p,!getPath(ui,d.p));render()},
+  perm:d=>{ui.setup.data.perms[d.k]=d.v==='1';render()},
+  info:(d,el,e)=>{e.preventDefault();if(d.k==='terms'||d.k==='privacy'){go('legal',{k:d.k});return}ui.modal={type:'info',k:d.k};render()},
+  'legal-tab':d=>{ui.params={k:d.k};render(true)},
+  'legal-accept':()=>{if(ui.setup)ui.setup.data.terms=true;ui.errors={};back()},
+  'pick-sugg':d=>{setPath(ui,d.p,d.val);render()},
+  'open-scen':()=>{ui.modal={type:'scen'};render()},
+  'set-scen':d=>{const prev=st.scenario;st.scenario=d.v;ui.modal=null;if(d.v!=='unavailable')st.updatedAt=nowHM();
+    if(d.v==='disruption'&&prev!=='disruption'&&st.prefs.notif.disruption)pushNotif('Há uma interrupção na linha do seu trajeto.','Linha 1-Azul com paralisação parcial entre Ana Rosa e Paraíso. Toque para comparar rotas.',{type:'route'});
+    const before=st.lastAlarm?.time; refresh(); const p=nextPlan(); const now=p&&p.alarm!=null?fmt(p.alarm):null;
+    toast(d.v==='unavailable'?'Previsão indisponível. Mantivemos o último horário válido.':now&&before&&now!==before?`${SCEN[d.v].short}: alarme ${before} → ${now}`:`${SCEN[d.v].label}. Alarme mantido${now?' em '+now:''}.`)},
+  'alarm-on':()=>{st.routine.alarmOn=true;commit(undefined,'Alarme ativado.')},
+  'toggle-alarm':()=>{st.routine.alarmOn=!st.routine.alarmOn;commit(undefined,st.routine.alarmOn?'Alarme ativado.':'Alarme desligado.')},
+  'save-alarm':()=>{const A0=ui.alarmDraft,R=st.routine;const p=ui.plan;const before=st.lastAlarm?.time;
+    Object.assign(R,{prep:A0.prep,earliest:A0.earliest,allowLater:A0.allowLater,allowEarlier:A0.allowEarlier,auto:A0.auto,sound:A0.sound,days:[...A0.days]});
+    if(p){p.ev.margin=A0.margin;if(p.ev.isRoutine)R.margin=A0.margin}
+    const rev=st.events.find(e=>e.isRoutine);if(rev){rev.repeat='custom';rev.days=[...A0.days]}
+    refresh('Você alterou as configurações do alarme.');const n=nextPlan();const now=n&&n.alarm!=null?fmt(n.alarm):null;ui.plan=n;ui.alarmDraft=makeAlarmDraft();
+    toast(now&&before&&now!==before?`Alterações salvas. Alarme ${before} → ${now}`:'Alterações salvas.')},
+  'set-manual':()=>{const p=ui.plan;if(!ui.alarmDraft.manualTime){toast('Escolha um horário.');return}st.routine.manual={date:p.date,time:ui.alarmDraft.manualTime};commit('Você definiu um horário manual.',`Horário manual: ${ui.alarmDraft.manualTime}`)},
+  'clear-manual':()=>{st.routine.manual=null;commit('Você voltou ao ajuste automático.','Ajuste automático retomado.')},
+  ring:()=>{ui.modal={type:'ring'};render()},
+  'new-event':d=>openEvent(null,d.d),
+  'edit-event':d=>openEvent(d.id),
+  'save-event':()=>saveEvent(),
+  'ask-delete':d=>{const ev=st.events.find(e=>e.id===d.id);ui.modal={type:'delete',id:d.id,routine:ev?.isRoutine,repeat:ev?.repeat!=='none'};render()},
+  'confirm-delete':d=>{const before=st.lastAlarm?.time;st.events=st.events.filter(e=>e.id!==d.id);if(st.trip?.eventId===d.id)st.trip=null;ui.modal=null;ui.eventDraft=null;refresh('Um compromisso foi excluído.');back();const p=nextPlan();const now=p&&p.alarm!=null?fmt(p.alarm):null;toast(now&&before&&now!==before?`Compromisso excluído. Alarme ${before} → ${now}`:'Compromisso excluído.')},
+  'pick-day':d=>{ui.agendaDate=d.d;render()},
+  'pick-day-week':d=>{ui.agendaDate=d.d;ui.agendaMode='day';render()},
+  'agenda-mode':d=>{ui.agendaMode=d.v;render()},
+  'cal-nav':d=>{const s=parseISO(ui.agendaDate||todayISO());const c=ui.calMonth||{y:s.getFullYear(),m:s.getMonth()};let m=c.m+ +d.n,y=c.y;if(m<0){m=11;y--}if(m>11){m=0;y++}ui.calMonth={y,m};render()},
+  'open-agenda':d=>{ui.agendaDate=d.d;ui.calMonth=null;ui.agendaMode='day';tab('agenda')},
+  'open-routes-plan':()=>{ui.rq=null;tab('routes')},
+  'open-routes':d=>{const a=st.events.find(e=>e.id===d.from),b=st.events.find(e=>e.id===d.to);ui.rq={from:{...a.location,label:a.location.label||a.name},to:{...b.location,label:b.location.label||b.name},arrive:b.start,margin:b.margin,mode:'all',date:d.d,eventId:b.id};go('routes')},
+  'toggle-steps':d=>{ui.expanded[d.m]=!ui.expanded[d.m];render()},
+  'use-route':d=>{const p=ui.plan;if(!p){st.selectedMode=d.m;commit(undefined,`Rota padrão: ${MODES[d.m].label}`);return}
+    const n=planFor(p.date,{mode:d.m});ui.modal={type:'route',m:d.m,before:{alarm:p.alarm!=null?fmt(p.alarm):'—',dep:fmt(p.depart),dur:p.dur},after:{alarm:n.alarm!=null?fmt(n.alarm):'—',dep:fmt(n.depart),dur:n.dur,arr:fmt(n.arrival)}};render()},
+  'confirm-route':d=>{const before=ui.modal.before;st.selectedMode=d.m;ui.modal=null;refresh(`Você escolheu ${MODES[d.m].label.toLowerCase()}.`);const n=nextPlan();toast(`Rota atualizada. Alarme ${before.alarm} → ${n&&n.alarm!=null?fmt(n.alarm):'—'}, saída ${n?fmt(n.depart):''}`)},
+  'start-trip':()=>startTrip(),
+  'trip-alts':()=>{const T=st.trip;ui.rq=null;tab('routes')},
+  'finish-trip':()=>{const T=st.trip;const sc=dataScenario();ui.modal={type:'finish',answer:null,time:fmt(T.depart+duration(T.mode,sc,T.ratio)+(T.extra||0))};render()},
+  'finish-ans':d=>{ui.modal.answer=d.v;render()},
+  'confirm-finish':()=>{const T=st.trip,M=ui.modal;if(!M.answer){toast('Escolha Sim, Não ou Não informar.');return}
+    st.history.unshift({id:uid('h'),date:T.date,dest:T.destLabel,mode:T.mode,planned:T.planned,actual:M.time||'',answer:M.answer});st.trip=null;ui.modal=null;save();ui.stack=[];ui.view='today';toast('Trajeto finalizado e salvo no histórico.')},
+  'bf-cat':d=>{ui.bf.cat=d.v;render()}, 'bf-near':()=>{ui.bf.near=!ui.bf.near;render()}, 'bf-reset':()=>{ui.bf={cat:'all',near:false};render()},
+  'partners-on':()=>{st.prefs.partners=true;save();render()},
+  copy:(d)=>{const done=()=>toast('Cupom copiado.');const fb=()=>{const el=document.getElementById('coupon');const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Cupom selecionado. Copie com o atalho do seu aparelho.')};
+    try{navigator.clipboard.writeText(d.code).then(done,fb)}catch(e){fb()}},
+  'ask-stop':d=>{ui.modal={type:'stop',id:d.id};render()},
+  'confirm-stop':d=>{const p=PARTNERS.find(x=>x.id===d.id);const before=st.lastAlarm?.time;const date=ui.plan?.date;
+    st.stop=d.leg?{partnerId:p.id,name:p.name,extra:p.extra,keep:true,date,leg:d.leg}:{partnerId:p.id,name:p.name,extra:p.extra,keep:d.keep==='1',date,leg:'commute'};
+    ui.modal=null;refresh(`Parada incluída: ${p.name}.`);const n=nextPlan();const now=n&&n.alarm!=null?fmt(n.alarm):null;toast(now&&before&&now!==before?`Parada incluída. Alarme ${before} → ${now}`:'Parada incluída no trajeto.')},
+  'remove-stop':(d,el,e)=>{e.preventDefault();st.stop=null;commit('Parada removida.','Parada removida.')},
+  'open-notif':d=>{const n=st.notifs.find(x=>x.id===d.id);n.read=true;save();const t=n.target||{};
+    if(t.type==='alarm'){openAlarm()}else if(t.type==='route'){ui.rq=null;go('routes')}else if(t.type==='event'&&st.events.find(e=>e.id===t.id)){openEvent(t.id)}else if(t.type==='trip'){if(st.trip)go('trip');else{ui.rq=null;go('routes')}}else render()},
+  'read-all':()=>{st.notifs.forEach(n=>n.read=true);save();render()},
+  'clear-notifs':()=>{st.notifs=[];save();render()},
+  'toggle-notif':d=>{st.prefs.notif[d.k]=!st.prefs.notif[d.k];save();render()},
+  'toggle-pref':d=>{st.prefs[d.k]=!st.prefs[d.k];if(d.k==='partners'&&!st.prefs.partners)st.stop=null;commit()},
+  'ask-reset':()=>{ui.modal={type:'reset'};render()},
+  'confirm-reset':()=>{try{localStorage.removeItem(KEY)}catch(e){} mem=null;st=blankState();ui.modal=null;ui.stack=[];ui.view='welcome';ui.rq=null;ui.agendaDate=null;render(true);toast('Dados locais excluídos.')},
+  'ask-clear-history':()=>{ui.modal={type:'clear-history'};render()},
+  'confirm-clear-history':()=>{st.history=[];ui.modal=null;save();toast('Histórico apagado.')},
+  'edit-place':d=>{const p=d.id?placeById(d.id):null;ui.modal={type:'place',id:p?.id,label:p?.label||'',address:p?.address||''};render()},
+  'save-place':()=>{const M=ui.modal;if(!M.label.trim()||!M.address.trim()){M.err='Preencha nome e endereço.';render();return}
+    const g=geocode(M.address);if(M.id){const p=placeById(M.id);Object.assign(p,{label:M.label.trim(),address:M.address.trim(),...g});st.events.forEach(e=>{if(e.location?.placeId===p.id)e.location=locFromPlace(p.id)})}else st.places.push({id:uid('pl'),label:M.label.trim(),address:M.address.trim(),...g});
+    ui.modal=null;ui.rq=null;commit('Você alterou um local salvo.','Local salvo.')},
+  'delete-place':d=>{st.places=st.places.filter(p=>p.id!==d.id);ui.modal=null;ui.rq=null;save();toast('Local removido.')},
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el)return;const f=A[el.dataset.action];if(f){if(el.tagName==='A'&&el.getAttribute('href')==='#')e.preventDefault();f(el.dataset,el,e)}});
+document.addEventListener('input',e=>{const el=e.target;if(!el.dataset.bind)return;setPath(ui,el.dataset.bind,readVal(el));if(el.dataset.sugg)showSugg(el)});
+document.addEventListener('change',e=>{const el=e.target;
+  if(el.dataset.change){const k=el.dataset.change;
+    if(k==='travel-min'){st.prefs.travelMin=+el.value;save();toast(`Aviso a partir de ${el.value} min de diferença.`)}
+    if(k==='set-name'){st.user.name=el.value.trim();save();toast('Nome atualizado.')}
+    if(k==='rq-place'){const v=el.value;if(v.startsWith('p:')){const p=placeById(v.slice(2));ui.rq[el.dataset.k]={...p,placeId:p.id};ui.rq.eventId=null;render()}}
+    if(k==='trip-step'){const i=+el.dataset.i;const T=st.trip;T.done=T.done.includes(i)?T.done.filter(x=>x!==i):[...T.done,i];save();render()}
+    return}
+  if(!el.dataset.bind)return;setPath(ui,el.dataset.bind,readVal(el));
+  if(el.type!=='text'&&!el.dataset.sugg)render();});
+function showSugg(el){const box=document.getElementById('sugg-'+el.id);if(!box)return;const v=norm(el.value);
+  if(v.length<2){box.innerHTML='';return}
+  const hits=SUGGEST.filter(s=>norm(s.a).includes(v)).slice(0,5);
+  box.innerHTML=hits.map(h=>`<button type="button" data-action="pick-sugg" data-p="${el.dataset.bind}" data-val="${esc(h.a)}">${icon('pin',16)}<span>${esc(h.a)}</span></button>`).join('')+(hits.length?'':`<button type="button" data-action="pick-sugg" data-p="${el.dataset.bind}" data-val="${esc(el.value)}">${icon('pin',16)}<span>Usar “${esc(el.value)}”</span><span class="tag">endereço digitado</span></button>`)+`<button type="button" disabled style="cursor:default;color:var(--faint);font-size:12px">Sugestões simuladas</button>`}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.modal){ui.modal=null;render()}});
+
+if(st.prefs){st.prefs.notif=st.prefs.notif||{};if(st.prefs.notif.travel==null)st.prefs.notif.travel=true;if(!st.prefs.travelMin)st.prefs.travelMin=5}
+if(st.onboarded&&st.routine)refresh();
+render(true);
+</script>
+</body>
+</html>
